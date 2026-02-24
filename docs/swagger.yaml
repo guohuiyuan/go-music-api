@@ -1,0 +1,104 @@
+basePath: /
+definitions:
+  handler.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      msg:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: 这是一个基于底层库构建的跨平台音乐搜索与解析统一 API 服务。
+  title: Go Music API
+  version: "1.0"
+paths:
+  /api/playlist/parse:
+    get:
+      description: 粘贴歌单分享链接，解析出歌单信息及包含的所有歌曲
+      parameters:
+      - description: 歌单分享链接
+        in: query
+        name: link
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response'
+      summary: 解析歌单链接
+      tags:
+      - 歌单功能
+  /api/playlist/recommend:
+    get:
+      description: 获取指定平台的热门/每日推荐歌单
+      parameters:
+      - description: 音乐平台
+        in: query
+        name: source
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response'
+      summary: 每日推荐歌单
+      tags:
+      - 歌单功能
+  /api/playlist/search:
+    get:
+      description: 通过关键词搜索指定平台的歌单
+      parameters:
+      - description: 歌单关键词
+        in: query
+        name: keyword
+        required: true
+        type: string
+      - description: 音乐平台
+        in: query
+        name: source
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response'
+      summary: 搜索歌单
+      tags:
+      - 歌单功能
+  /api/search:
+    get:
+      description: 根据关键词和指定的平台搜索音乐
+      parameters:
+      - description: 搜索关键词
+        in: query
+        name: keyword
+        required: true
+        type: string
+      - description: 音乐平台(qq/netease/kuwo/kugou/migu等)
+        in: query
+        name: source
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response'
+      summary: 搜索单曲
+      tags:
+      - 单曲功能
+swagger: "2.0"

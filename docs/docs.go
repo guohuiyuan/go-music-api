@@ -30,12 +30,12 @@ const docTemplate = `{
                 "summary": "获取下载/播放链接",
                 "parameters": [
                     {
-                        "description": "歌曲对象 (必须包含 Source 和 ID)",
-                        "name": "song",
+                        "description": "请求参数",
+                        "name": "req",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.Song"
+                            "$ref": "#/definitions/handler.SongReq"
                         }
                     }
                 ],
@@ -64,12 +64,12 @@ const docTemplate = `{
                 "summary": "获取歌曲歌词",
                 "parameters": [
                     {
-                        "description": "歌曲对象 (必须包含 Source 和 ID)",
-                        "name": "song",
+                        "description": "请求参数",
+                        "name": "req",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.Song"
+                            "$ref": "#/definitions/handler.SongReq"
                         }
                     }
                 ],
@@ -96,6 +96,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "default": "https://y.qq.com/n/ryqq/songDetail/0039MnYb0qxYhV",
                         "description": "单曲分享链接",
                         "name": "link",
                         "in": "query",
@@ -125,6 +126,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "default": "3778678",
                         "description": "歌单ID",
                         "name": "id",
                         "in": "query",
@@ -132,6 +134,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "default": "netease",
                         "description": "音乐平台",
                         "name": "source",
                         "in": "query",
@@ -161,6 +164,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "default": "https://music.163.com/#/playlist?id=3778678",
                         "description": "歌单分享链接",
                         "name": "link",
                         "in": "query",
@@ -190,6 +194,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "default": "qq",
                         "description": "音乐平台",
                         "name": "source",
                         "in": "query",
@@ -219,6 +224,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "default": "华语流行",
                         "description": "歌单关键词",
                         "name": "keyword",
                         "in": "query",
@@ -226,6 +232,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "default": "netease",
                         "description": "音乐平台",
                         "name": "source",
                         "in": "query",
@@ -255,6 +262,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "default": "抖音",
                         "description": "搜索关键词",
                         "name": "keyword",
                         "in": "query",
@@ -262,6 +270,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "default": "qq",
                         "description": "音乐平台(qq/netease/kuwo/kugou/migu/bilibili/fivesing/joox/soda/jamendo/qianqian等)",
                         "name": "source",
                         "in": "query",
@@ -292,67 +301,29 @@ const docTemplate = `{
                 }
             }
         },
-        "model.Song": {
+        "handler.SongReq": {
             "type": "object",
+            "required": [
+                "id",
+                "source"
+            ],
             "properties": {
-                "album": {
-                    "type": "string"
-                },
-                "album_id": {
-                    "description": "某些源特有，用于获取封面",
-                    "type": "string"
-                },
-                "artist": {
-                    "type": "string"
-                },
-                "bitrate": {
-                    "description": "码率 (kbps)",
-                    "type": "integer"
-                },
-                "cover": {
-                    "description": "封面图片链接",
-                    "type": "string"
-                },
-                "duration": {
-                    "description": "秒",
-                    "type": "integer"
-                },
-                "ext": {
-                    "description": "文件后缀 (mp3, flac...)",
-                    "type": "string"
-                },
                 "extra": {
-                    "description": "用于存储源特有的元数据，避免解析 ID",
                     "type": "object",
                     "additionalProperties": {
                         "type": "string"
+                    },
+                    "example": {
+                        "{\"song_id\"": "\"31445554\"}"
                     }
                 },
                 "id": {
-                    "type": "string"
-                },
-                "is_invalid": {
-                    "description": "[新增] 标记歌曲是否无效 (经过 Probe 探测后)",
-                    "type": "boolean"
-                },
-                "link": {
-                    "description": "[新增] 歌曲原始链接 (例如网页地址)",
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "size": {
-                    "description": "文件大小 (字节)",
-                    "type": "integer"
+                    "type": "string",
+                    "example": "31445554"
                 },
                 "source": {
-                    "description": "kugou, netease, qq, bilibili...",
-                    "type": "string"
-                },
-                "url": {
-                    "description": "真实音频文件下载链接",
-                    "type": "string"
+                    "type": "string",
+                    "example": "netease"
                 }
             }
         }

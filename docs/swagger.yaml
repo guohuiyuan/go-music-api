@@ -8,51 +8,23 @@ definitions:
       msg:
         type: string
     type: object
-  model.Song:
+  handler.SongReq:
     properties:
-      album:
-        type: string
-      album_id:
-        description: 某些源特有，用于获取封面
-        type: string
-      artist:
-        type: string
-      bitrate:
-        description: 码率 (kbps)
-        type: integer
-      cover:
-        description: 封面图片链接
-        type: string
-      duration:
-        description: 秒
-        type: integer
-      ext:
-        description: 文件后缀 (mp3, flac...)
-        type: string
       extra:
         additionalProperties:
           type: string
-        description: 用于存储源特有的元数据，避免解析 ID
+        example:
+          '{"song_id"': '"31445554"}'
         type: object
       id:
+        example: "31445554"
         type: string
-      is_invalid:
-        description: '[新增] 标记歌曲是否无效 (经过 Probe 探测后)'
-        type: boolean
-      link:
-        description: '[新增] 歌曲原始链接 (例如网页地址)'
-        type: string
-      name:
-        type: string
-      size:
-        description: 文件大小 (字节)
-        type: integer
       source:
-        description: kugou, netease, qq, bilibili...
+        example: netease
         type: string
-      url:
-        description: 真实音频文件下载链接
-        type: string
+    required:
+    - id
+    - source
     type: object
 host: localhost:8080
 info:
@@ -67,12 +39,12 @@ paths:
       - application/json
       description: 传入带源和ID的歌曲JSON获取底层音频直链 (通常作为播放地址使用)
       parameters:
-      - description: 歌曲对象 (必须包含 Source 和 ID)
+      - description: 请求参数
         in: body
-        name: song
+        name: req
         required: true
         schema:
-          $ref: '#/definitions/model.Song'
+          $ref: '#/definitions/handler.SongReq'
       produces:
       - application/json
       responses:
@@ -89,12 +61,12 @@ paths:
       - application/json
       description: 传入带源和ID的歌曲JSON获取LRC格式的歌词文本
       parameters:
-      - description: 歌曲对象 (必须包含 Source 和 ID)
+      - description: 请求参数
         in: body
-        name: song
+        name: req
         required: true
         schema:
-          $ref: '#/definitions/model.Song'
+          $ref: '#/definitions/handler.SongReq'
       produces:
       - application/json
       responses:
@@ -109,7 +81,8 @@ paths:
     get:
       description: 粘贴任意平台的单曲分享链接，自动识别平台并解析出歌曲详情
       parameters:
-      - description: 单曲分享链接
+      - default: https://y.qq.com/n/ryqq/songDetail/0039MnYb0qxYhV
+        description: 单曲分享链接
         in: query
         name: link
         required: true
@@ -128,12 +101,14 @@ paths:
     get:
       description: 根据歌单ID和指定的平台，获取歌单内的所有歌曲
       parameters:
-      - description: 歌单ID
+      - default: "3778678"
+        description: 歌单ID
         in: query
         name: id
         required: true
         type: string
-      - description: 音乐平台
+      - default: netease
+        description: 音乐平台
         in: query
         name: source
         required: true
@@ -152,7 +127,8 @@ paths:
     get:
       description: 粘贴歌单分享链接，自动识别平台并解析出歌单详情及包含的所有歌曲
       parameters:
-      - description: 歌单分享链接
+      - default: https://music.163.com/#/playlist?id=3778678
+        description: 歌单分享链接
         in: query
         name: link
         required: true
@@ -171,7 +147,8 @@ paths:
     get:
       description: 获取指定平台的热门或每日推荐歌单
       parameters:
-      - description: 音乐平台
+      - default: qq
+        description: 音乐平台
         in: query
         name: source
         required: true
@@ -190,12 +167,14 @@ paths:
     get:
       description: 通过关键词搜索指定平台的歌单列表
       parameters:
-      - description: 歌单关键词
+      - default: 华语流行
+        description: 歌单关键词
         in: query
         name: keyword
         required: true
         type: string
-      - description: 音乐平台
+      - default: netease
+        description: 音乐平台
         in: query
         name: source
         required: true
@@ -214,12 +193,14 @@ paths:
     get:
       description: 根据关键词和指定的平台搜索音乐
       parameters:
-      - description: 搜索关键词
+      - default: 抖音
+        description: 搜索关键词
         in: query
         name: keyword
         required: true
         type: string
-      - description: 音乐平台(qq/netease/kuwo/kugou/migu/bilibili/fivesing/joox/soda/jamendo/qianqian等)
+      - default: qq
+        description: 音乐平台(qq/netease/kuwo/kugou/migu/bilibili/fivesing/joox/soda/jamendo/qianqian等)
         in: query
         name: source
         required: true

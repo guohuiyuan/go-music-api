@@ -15,11 +15,18 @@ type Response struct {
 	Data interface{} `json:"data,omitempty"`
 }
 
+// SongReq 专用请求体，确保 Swagger 页面只显示这三个字段
+type SongReq struct {
+	ID     string            `json:"id" binding:"required" example:"31445554"`
+	Source string            `json:"source" binding:"required" example:"netease"`
+	Extra  map[string]string `json:"extra,omitempty" example:"{\"song_id\":\"31445554\"}"`
+}
+
 // @Summary 搜索单曲
 // @Description 根据关键词和指定的平台搜索音乐
 // @Tags 单曲功能
-// @Param keyword query string true "搜索关键词"
-// @Param source query string true "音乐平台(qq/netease/kuwo/kugou/migu/bilibili/fivesing/joox/soda/jamendo/qianqian等)"
+// @Param keyword query string true "搜索关键词" default(抖音)
+// @Param source query string true "音乐平台(qq/netease/kuwo/kugou/migu/bilibili/fivesing/joox/soda/jamendo/qianqian等)" default(qq)
 // @Produce json
 // @Success 200 {object} Response
 // @Router /api/search [get]
@@ -54,7 +61,7 @@ func SearchMusic(c *gin.Context) {
 // @Summary 解析单曲链接
 // @Description 粘贴任意平台的单曲分享链接，自动识别平台并解析出歌曲详情
 // @Tags 单曲功能
-// @Param link query string true "单曲分享链接"
+// @Param link query string true "单曲分享链接" default(https://y.qq.com/n/ryqq/songDetail/0039MnYb0qxYhV)
 // @Produce json
 // @Success 200 {object} Response
 // @Router /api/parse [get]
@@ -90,8 +97,8 @@ func ParseLink(c *gin.Context) {
 // @Summary 搜索歌单
 // @Description 通过关键词搜索指定平台的歌单列表
 // @Tags 歌单功能
-// @Param keyword query string true "歌单关键词"
-// @Param source query string true "音乐平台"
+// @Param keyword query string true "歌单关键词" default(华语流行)
+// @Param source query string true "音乐平台" default(netease)
 // @Produce json
 // @Success 200 {object} Response
 // @Router /api/playlist/search [get]
@@ -121,8 +128,8 @@ func SearchPlaylist(c *gin.Context) {
 // @Summary 获取歌单详情(包含歌曲列表)
 // @Description 根据歌单ID和指定的平台，获取歌单内的所有歌曲
 // @Tags 歌单功能
-// @Param id query string true "歌单ID"
-// @Param source query string true "音乐平台"
+// @Param id query string true "歌单ID" default(3778678)
+// @Param source query string true "音乐平台" default(netease)
 // @Produce json
 // @Success 200 {object} Response
 // @Router /api/playlist/detail [get]
@@ -157,7 +164,7 @@ func GetPlaylistDetail(c *gin.Context) {
 // @Summary 每日推荐歌单
 // @Description 获取指定平台的热门或每日推荐歌单
 // @Tags 歌单功能
-// @Param source query string true "音乐平台"
+// @Param source query string true "音乐平台" default(qq)
 // @Produce json
 // @Success 200 {object} Response
 // @Router /api/playlist/recommend [get]
@@ -186,7 +193,7 @@ func GetRecommendPlaylists(c *gin.Context) {
 // @Summary 解析歌单链接
 // @Description 粘贴歌单分享链接，自动识别平台并解析出歌单详情及包含的所有歌曲
 // @Tags 歌单功能
-// @Param link query string true "歌单分享链接"
+// @Param link query string true "歌单分享链接" default(https://music.163.com/#/playlist?id=3778678)
 // @Produce json
 // @Success 200 {object} Response
 // @Router /api/playlist/parse [get]
@@ -221,19 +228,22 @@ func ParsePlaylistLink(c *gin.Context) {
 // @Tags 核心解析
 // @Accept json
 // @Produce json
-// @Param song body model.Song true "歌曲对象 (必须包含 Source 和 ID)"
+// @Param req body SongReq true "请求参数"
 // @Success 200 {object} Response
 // @Router /api/download_url [post]
 func GetDownloadUrl(c *gin.Context) {
-	var song model.Song
-	if err := c.ShouldBindJSON(&song); err != nil {
-		c.JSON(http.StatusBadRequest, Response{Code: 400, Msg: "无效的请求参数"})
+	var req SongReq
+	// 1. 绑定到精简版的请求体
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, Response{Code: 400, Msg: "无效的请求参数: " + err.Error()})
 		return
 	}
 
-	if song.Source == "" || song.ID == "" {
-		c.JSON(http.StatusBadRequest, Response{Code: 400, Msg: "缺失必要的歌曲 ID 或 Source"})
-		return
+	// 2. 构造底层需要的完整 model.Song
+	song := &model.Song{
+		ID:     req.ID,
+		Source: req.Source,
+		Extra:  req.Extra,
 	}
 
 	dlFn := service.GetDownloadFunc(song.Source)
@@ -242,7 +252,7 @@ func GetDownloadUrl(c *gin.Context) {
 		return
 	}
 
-	url, err := dlFn(&song)
+	url, err := dlFn(song)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, Response{Code: 500, Msg: "获取链接失败: " + err.Error()})
 		return
@@ -256,19 +266,22 @@ func GetDownloadUrl(c *gin.Context) {
 // @Tags 核心解析
 // @Accept json
 // @Produce json
-// @Param song body model.Song true "歌曲对象 (必须包含 Source 和 ID)"
+// @Param req body SongReq true "请求参数"
 // @Success 200 {object} Response
 // @Router /api/lyric [post]
 func GetLyric(c *gin.Context) {
-	var song model.Song
-	if err := c.ShouldBindJSON(&song); err != nil {
-		c.JSON(http.StatusBadRequest, Response{Code: 400, Msg: "无效的请求参数"})
+	var req SongReq
+	// 1. 绑定到精简版的请求体
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, Response{Code: 400, Msg: "无效的请求参数: " + err.Error()})
 		return
 	}
 
-	if song.Source == "" || song.ID == "" {
-		c.JSON(http.StatusBadRequest, Response{Code: 400, Msg: "缺失必要的歌曲 ID 或 Source"})
-		return
+	// 2. 构造底层需要的完整 model.Song
+	song := &model.Song{
+		ID:     req.ID,
+		Source: req.Source,
+		Extra:  req.Extra,
 	}
 
 	lyricFn := service.GetLyricFunc(song.Source)
@@ -277,7 +290,7 @@ func GetLyric(c *gin.Context) {
 		return
 	}
 
-	lyric, err := lyricFn(&song)
+	lyric, err := lyricFn(song)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, Response{Code: 500, Msg: "获取歌词失败: " + err.Error()})
 		return

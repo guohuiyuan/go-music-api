@@ -1,0 +1,15 @@
+services:
+  go-music-api:
+    # 直接拉取最新镜像，实现快速部署
+    image: guohuiyuan/go-music-api:latest
+    container_name: go-music-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      # 挂载下载目录和配置文件
+      - ./cookies.json:/home/appuser/cookies.json
+    environment:
+      - TZ=Asia/Shanghai
+    # 确保以 appuser (uid=1000) 身份运行，配合宿主机权限设置
+    user: "1000:1000"

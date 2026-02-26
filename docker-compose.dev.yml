@@ -1,0 +1,15 @@
+services:
+   go-music-api:
+    # 强制在本地使用 Dockerfile 进行实时构建
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name:  go-music-api-dev
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./cookies.json:/home/appuser/cookies.json
+    environment:
+      - TZ=Asia/Shanghai
+    user: "1000:1000"

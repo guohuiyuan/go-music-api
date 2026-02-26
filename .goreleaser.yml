@@ -1,0 +1,87 @@
+version: 2
+project_name: go-music-api
+env:
+  - GO111MODULE=on
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+builds:
+  # 1. Linux & macOS 构建 (统一在这里)
+  - id: unix
+    env:
+      - CGO_ENABLED=0
+      - GO111MODULE=on
+    goos:
+      - linux
+      - darwin   # [新增] 添加 darwin 支持 macOS CLI 构建
+    goarch:
+      - 386
+      - amd64
+      - arm
+      - arm64
+    goarm:
+      - 6
+      - 7
+    main: .
+    binary: go-music-api
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+
+  # 2. Windows 构建 (保持不变)
+  - id: win
+    env:
+      - CGO_ENABLED=0
+      - GO111MODULE=on
+    goos:
+      - windows
+    goarch:
+      - amd64
+    main: .
+    binary: go-music-api
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+
+checksum:
+  name_template: "go-music-api_checksums.txt"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - fix typo
+      - Merge pull request
+      - Merge branch
+      - Merge remote-tracking
+      - go mod tidy
+
+archives:
+  # Linux & macOS 打包格式 (tar.gz)
+  - id: unix
+    builds:
+      - unix
+    name_template: "go-music-api_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    format: tar.gz
+
+  # Windows 打包格式 (zip)
+  - id: win
+    builds:
+      - win
+    name_template: "go-music-api_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    format: zip
+
+nfpms:
+  - license: AGPL 3.0
+    homepage: https://github.com/guohuiyuan/go-music-api
+    file_name_template: "go-music-api_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    formats:
+      - deb
+      - rpm
+    maintainer: guohuiyuan

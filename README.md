@@ -3,6 +3,10 @@
 跨平台音乐搜索与解析统一 HTTP API 服务，基于 `music-lib` 构建，提供简易的 Web 接口与 Swagger 文档。
 
 **Quick Start**
+- **生成 Swagger 文档（若你修改了注释）：** 安装 `swag` 并运行 `swag init` 以生成 `docs` 目录和 Swagger JSON：
+-   - 安装: `go install github.com/swaggo/swag/cmd/swag@latest`
+-   - 运行: `swag init --parseDependency --parseInternal`
+-
 - **本地运行:** `go run main.go`
 - **构建二进制:** `go build -o go-music-api .`
 - **在容器中运行:**

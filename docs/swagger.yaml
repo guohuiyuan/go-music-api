@@ -8,6 +8,52 @@ definitions:
       msg:
         type: string
     type: object
+  model.Song:
+    properties:
+      album:
+        type: string
+      album_id:
+        description: 某些源特有，用于获取封面
+        type: string
+      artist:
+        type: string
+      bitrate:
+        description: 码率 (kbps)
+        type: integer
+      cover:
+        description: 封面图片链接
+        type: string
+      duration:
+        description: 秒
+        type: integer
+      ext:
+        description: 文件后缀 (mp3, flac...)
+        type: string
+      extra:
+        additionalProperties:
+          type: string
+        description: 用于存储源特有的元数据，避免解析 ID
+        type: object
+      id:
+        type: string
+      is_invalid:
+        description: '[新增] 标记歌曲是否无效 (经过 Probe 探测后)'
+        type: boolean
+      link:
+        description: '[新增] 歌曲原始链接 (例如网页地址)'
+        type: string
+      name:
+        type: string
+      size:
+        description: 文件大小 (字节)
+        type: integer
+      source:
+        description: kugou, netease, qq, bilibili...
+        type: string
+      url:
+        description: 真实音频文件下载链接
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact: {}
@@ -15,9 +61,96 @@ info:
   title: Go Music API
   version: "1.0"
 paths:
+  /api/download_url:
+    post:
+      consumes:
+      - application/json
+      description: 传入带源和ID的歌曲JSON获取底层音频直链 (通常作为播放地址使用)
+      parameters:
+      - description: 歌曲对象 (必须包含 Source 和 ID)
+        in: body
+        name: song
+        required: true
+        schema:
+          $ref: '#/definitions/model.Song'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response'
+      summary: 获取下载/播放链接
+      tags:
+      - 核心解析
+  /api/lyric:
+    post:
+      consumes:
+      - application/json
+      description: 传入带源和ID的歌曲JSON获取LRC格式的歌词文本
+      parameters:
+      - description: 歌曲对象 (必须包含 Source 和 ID)
+        in: body
+        name: song
+        required: true
+        schema:
+          $ref: '#/definitions/model.Song'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response'
+      summary: 获取歌曲歌词
+      tags:
+      - 核心解析
+  /api/parse:
+    get:
+      description: 粘贴任意平台的单曲分享链接，自动识别平台并解析出歌曲详情
+      parameters:
+      - description: 单曲分享链接
+        in: query
+        name: link
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response'
+      summary: 解析单曲链接
+      tags:
+      - 单曲功能
+  /api/playlist/detail:
+    get:
+      description: 根据歌单ID和指定的平台，获取歌单内的所有歌曲
+      parameters:
+      - description: 歌单ID
+        in: query
+        name: id
+        required: true
+        type: string
+      - description: 音乐平台
+        in: query
+        name: source
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response'
+      summary: 获取歌单详情(包含歌曲列表)
+      tags:
+      - 歌单功能
   /api/playlist/parse:
     get:
-      description: 粘贴歌单分享链接，解析出歌单信息及包含的所有歌曲
+      description: 粘贴歌单分享链接，自动识别平台并解析出歌单详情及包含的所有歌曲
       parameters:
       - description: 歌单分享链接
         in: query
@@ -36,7 +169,7 @@ paths:
       - 歌单功能
   /api/playlist/recommend:
     get:
-      description: 获取指定平台的热门/每日推荐歌单
+      description: 获取指定平台的热门或每日推荐歌单
       parameters:
       - description: 音乐平台
         in: query
@@ -55,7 +188,7 @@ paths:
       - 歌单功能
   /api/playlist/search:
     get:
-      description: 通过关键词搜索指定平台的歌单
+      description: 通过关键词搜索指定平台的歌单列表
       parameters:
       - description: 歌单关键词
         in: query
@@ -86,7 +219,7 @@ paths:
         name: keyword
         required: true
         type: string
-      - description: 音乐平台(qq/netease/kuwo/kugou/migu等)
+      - description: 音乐平台(qq/netease/kuwo/kugou/migu/bilibili/fivesing/joox/soda/jamendo/qianqian等)
         in: query
         name: source
         required: true

@@ -80,7 +80,6 @@ func setDownloadHeader(c *gin.Context, filename string) {
 // @Success 200 {object} map[string]string "成功返回各平台 Cookie 键值对"
 // @Router /api/v1/system/cookies [get]
 func GetCookies(c *gin.Context) {
-	// 由于 factory 中没有暴露出内部 map，我们直接读取文件返回
 	data, err := os.ReadFile("cookies.json")
 	if err != nil {
 		c.JSON(200, gin.H{})
@@ -104,7 +103,6 @@ func GetCookies(c *gin.Context) {
 func SetCookies(c *gin.Context) {
 	var req map[string]string
 	if err := c.ShouldBindJSON(&req); err == nil {
-		// 覆盖并保存文件，然后重新加载到内存
 		data, _ := json.MarshalIndent(req, "", "  ")
 		_ = os.WriteFile("cookies.json", data, 0644)
 		service.CM.Load()
@@ -123,8 +121,8 @@ func SetCookies(c *gin.Context) {
 // @Description 兼容多源并发搜索以及链接智能解析，自动返回单曲或歌单数组。支持直接输入关键词或粘贴音乐平台的分享链接。
 // @Tags Music
 // @Produce json
-// @Param q query string true "关键词或音乐分享链接" example("七里香 周杰伦")
-// @Param type query string false "搜索类型: song (单曲) 或 playlist (歌单)" Enums(song, playlist) default("song")
+// @Param q query string true "关键词或音乐分享链接" default(香水有毒) example(香水有毒)
+// @Param type query string false "搜索类型: song (单曲) 或 playlist (歌单)" Enums(song, playlist) default(song)
 // @Param sources query []string false "指定的音源数组(留空则默认全平台)。例: netease, qq" collectionFormat(multi)
 // @Success 200 {object} Response "成功时返回解析的数据，包含歌曲/歌单列表"
 // @Failure 400 {object} Response "不支持的链接解析"
@@ -150,7 +148,6 @@ func UnifiedSearch(c *gin.Context) {
 	var allPlaylists []model.Playlist
 	var errorMsg string
 
-	// 1. 如果是 HTTP 链接，走解析逻辑
 	if strings.HasPrefix(keyword, "http") {
 		src := service.DetectSource(keyword)
 		if src == "" {
@@ -183,7 +180,6 @@ func UnifiedSearch(c *gin.Context) {
 			errorMsg = fmt.Sprintf("解析失败: 暂不支持 %s 平台的此链接类型或解析出错", src)
 		}
 	} else {
-		// 2. 多源并发关键词搜索
 		var wg sync.WaitGroup
 		var mu sync.Mutex
 
@@ -221,7 +217,6 @@ func UnifiedSearch(c *gin.Context) {
 		return
 	}
 
-	// 统一输出 JSON，供前后端分离项目使用
 	c.JSON(200, Response{
 		Code: 200,
 		Msg:  "success",
@@ -242,10 +237,10 @@ func UnifiedSearch(c *gin.Context) {
 // @Description 包含完整的各平台流代理逻辑（解决跨域防盗链），并特殊支持 Soda(汽水音乐) 加密流数据的后端解密。
 // @Tags Music
 // @Produce audio/mpeg
-// @Param id query string true "音乐 ID" example("1815969416")
-// @Param source query string true "音乐来源平台" Enums(netease, qq, kugou, kuwo, bilibili, soda, migu, fivesing) example("netease")
-// @Param name query string false "音乐名称 (用于生成下载文件名)" default("Unknown")
-// @Param artist query string false "歌手名称 (用于生成下载文件名)" default("Unknown")
+// @Param id query string true "音乐 ID" default(240479) example(240479)
+// @Param source query string true "音乐来源平台" Enums(netease, qq, kugou, kuwo, bilibili, soda, migu, fivesing) default(netease) example(netease)
+// @Param name query string false "音乐名称 (用于生成下载文件名)" default(香水有毒) example(香水有毒)
+// @Param artist query string false "歌手名称 (用于生成下载文件名)" default(胡杨林) example(胡杨林)
 // @Success 200 {file} file "直接返回音频二进制流，支持 HTTP Range"
 // @Failure 400 {string} string "参数缺失或非法"
 // @Failure 404 {string} string "找不到音频URL"
@@ -265,7 +260,6 @@ func StreamMusic(c *gin.Context) {
 	tempSong := &model.Song{ID: id, Source: source, Name: name, Artist: artist}
 	filename := fmt.Sprintf("%s - %s.mp3", artist, name)
 
-	// 特殊处理 Soda (汽水音乐) 加密流
 	if source == "soda" {
 		cookie := service.CM.Get("soda")
 		sodaInst := soda.New(cookie)
@@ -296,7 +290,6 @@ func StreamMusic(c *gin.Context) {
 		return
 	}
 
-	// 通用源处理
 	dlFunc := service.GetDownloadFunc(source)
 	if dlFunc == nil {
 		c.String(400, "Unknown source")
@@ -338,9 +331,9 @@ func StreamMusic(c *gin.Context) {
 // @Description 快速探测音频直链的可访问性，并根据 `Content-Range` 推算文件大小及大概码率。
 // @Tags Music
 // @Produce json
-// @Param id query string true "音乐 ID" example("1815969416")
-// @Param source query string true "音乐来源平台" example("netease")
-// @Param duration query string false "音乐时长(秒)，若提供则可更精确预估码率(kbps)" example("255")
+// @Param id query string true "音乐 ID" default(240479) example(240479)
+// @Param source query string true "音乐来源平台" default(netease) example(netease)
+// @Param duration query string false "音乐时长(秒)，提供可精确预估码率(kbps)" default(290) example(290)
 // @Success 200 {object} Response "包含有效状态、真实URL、文件大小和码率等探测信息"
 // @Router /api/v1/music/inspect [get]
 func InspectMusic(c *gin.Context) {
@@ -412,14 +405,14 @@ func InspectMusic(c *gin.Context) {
 
 // SwitchSource 智能切换音源
 // @Summary 智能切换可用的平替音源
-// @Description 当某一平台的歌曲灰掉（无版权）时，通过 Levenshtein 距离算法和时长匹配，智能寻源切换到其他存在该歌曲的可用平台。
+// @Description 当某一平台的歌曲灰掉（无版权）时，智能寻源切换到其他存在该歌曲的可用平台。
 // @Tags Music
 // @Produce json
-// @Param name query string true "歌曲名称 (非常关键的匹配项)" example("七里香")
-// @Param artist query string false "歌手名称" example("周杰伦")
-// @Param source query string true "当前损坏的音源(将跳过此源搜索)" example("netease")
-// @Param target query string false "指定目标尝试的音源，为空则遍历主流平台搜索"
-// @Param duration query string false "原音频时长(秒)，提供此时长可极大提高匹配准确度"
+// @Param name query string true "歌曲名称 (非常关键的匹配项)" default(香水有毒) example(香水有毒)
+// @Param artist query string false "歌手名称" default(胡杨林) example(胡杨林)
+// @Param source query string true "当前损坏的音源(将跳过此源搜索)" default(netease) example(netease)
+// @Param target query string false "指定目标尝试的音源，为空则遍历主流平台搜索" default() example()
+// @Param duration query string false "原音频时长(秒)，提供此时长可极大提高匹配准确度" default(290) example(290)
 // @Success 200 {object} model.Song "成功找到高匹配度的可用歌曲"
 // @Failure 400 {object} Response "参数错误(缺失歌名)"
 // @Failure 404 {object} Response "未匹配到任何可用平替源"
@@ -550,11 +543,11 @@ func SwitchSource(c *gin.Context) {
 
 // GetMusicUrl 辅助 API：获取音频裸直链
 // @Summary 获取音频裸直链
-// @Description 获取解析到的原始音频播放链接。注：客户端直接使用裸链接可能受到平台的防盗链拦截限制（推荐使用 `/stream` 代理接口）。
+// @Description 获取解析到的原始音频播放链接。注：部分平台需要客户端带上特定的防盗链 header。
 // @Tags Music
 // @Produce json
-// @Param id query string true "音乐 ID" example("1815969416")
-// @Param source query string true "平台源" example("netease")
+// @Param id query string true "音乐 ID" default(240479) example(240479)
+// @Param source query string true "平台源" default(netease) example(netease)
 // @Success 200 {object} Response "直接返回带有 url 的数据实体"
 // @Failure 400 {object} Response "源不支持"
 // @Failure 500 {object} Response "链接抓取失败"
@@ -580,11 +573,11 @@ func GetMusicUrl(c *gin.Context) {
 
 // GetLyric 获取 JSON 格式歌词
 // @Summary 获取 JSON 格式歌词
-// @Description 抓取对应歌曲的带有时间轴的完整 LRC 歌词文本，采用标准 JSON 格式返回。
+// @Description 抓取对应歌曲的完整 LRC 歌词文本，以 JSON 格式返回。
 // @Tags Music
 // @Produce json
-// @Param id query string true "音乐 ID"
-// @Param source query string true "平台"
+// @Param id query string true "音乐 ID" default(240479) example(240479)
+// @Param source query string true "平台" default(netease) example(netease)
 // @Success 200 {object} Response "包含 lyric 字符串属性的数据对象"
 // @Failure 400 {object} Response "对应平台未实现歌词抓取"
 // @Router /api/v1/music/lyric [get]
@@ -604,8 +597,8 @@ func GetLyric(c *gin.Context) {
 // @Description 直接返回 `text/plain` 格式的纯歌词内容。若拉取失败，返回默认占位符提示。
 // @Tags Music (Compat)
 // @Produce text/plain
-// @Param id query string true "音乐 ID"
-// @Param source query string true "平台"
+// @Param id query string true "音乐 ID" default(240479) example(240479)
+// @Param source query string true "平台" default(netease) example(netease)
 // @Success 200 {string} string "LRC 文本"
 // @Router /music/lyric [get]
 func GetLyricText(c *gin.Context) {
@@ -624,10 +617,10 @@ func GetLyricText(c *gin.Context) {
 // @Description 作为附件直接下载 `.lrc` 后缀的歌词文件到本地。
 // @Tags Music
 // @Produce application/octet-stream
-// @Param id query string true "音乐 ID"
-// @Param source query string true "平台"
-// @Param name query string false "音乐名称 (用于生成保存文件名)"
-// @Param artist query string false "歌手名称 (用于生成保存文件名)"
+// @Param id query string true "音乐 ID" default(240479) example(240479)
+// @Param source query string true "平台" default(netease) example(netease)
+// @Param name query string false "音乐名称 (生成保存文件名)" default(香水有毒) example(香水有毒)
+// @Param artist query string false "歌手名称 (生成保存文件名)" default(胡杨林) example(胡杨林)
 // @Success 200 {file} file "纯文本文件流"
 // @Router /api/v1/music/lyric/file [get]
 func DownloadLyricFile(c *gin.Context) {
@@ -655,9 +648,9 @@ func DownloadLyricFile(c *gin.Context) {
 // @Description 发送带伪造标头的请求拉取远端封面大图，避开网易云、QQ 音乐的图片防盗链 403 问题。
 // @Tags Music
 // @Produce image/jpeg
-// @Param url query string true "封面图原始 URL (需经过 urlencode)"
-// @Param name query string false "歌曲名(用于生成下载文件名)"
-// @Param artist query string false "歌手名(用于生成下载文件名)"
+// @Param url query string true "封面图原始 URL (需经过 urlencode)" default(https://p1.music.126.net/u9YkzGKeL6VgHQZ1Zb-7Sw==/2529976256655220.jpg) example(https://p1.music.126.net/u9YkzGKeL6VgHQZ1Zb-7Sw==/2529976256655220.jpg)
+// @Param name query string false "歌曲名(用于生成下载文件名)" default(香水有毒) example(香水有毒)
+// @Param artist query string false "歌手名(用于生成下载文件名)" default(胡杨林) example(胡杨林)
 // @Success 200 {file} file "原封不动的图片流"
 // @Router /api/v1/music/cover [get]
 func ProxyCover(c *gin.Context) {
@@ -681,8 +674,8 @@ func ProxyCover(c *gin.Context) {
 // @Description 传入源平台的对应歌单 ID，全量拉取并返回歌单内的全部单曲列表。
 // @Tags Playlist
 // @Produce json
-// @Param id query string true "歌单的内部 ID"
-// @Param source query string true "歌单所属平台" example("netease")
+// @Param id query string true "歌单的内部 ID" default(596729952) example(596729952)
+// @Param source query string true "歌单所属平台" default(netease) example(netease)
 // @Success 200 {object} Response "成功的数组列表"
 // @Failure 400 {object} Response "源不支持"
 // @Router /api/v1/playlist/detail [get]
@@ -713,7 +706,7 @@ func GetPlaylistDetail(c *gin.Context) {
 // @Description 异步并发调用所勾选平台的接口，聚合返回他们各自首页推荐的当红歌单数据。
 // @Tags Playlist
 // @Produce json
-// @Param sources query []string false "要获取的推荐平台列表 (留空则使用默认配置)" collectionFormat(multi)
+// @Param sources query []string false "要获取的推荐平台列表 (留空则使用默认配置)" collectionFormat(multi) default(netease,qq,kugou,kuwo)
 // @Success 200 {object} Response "各个平台的推荐歌单数组"
 // @Router /api/v1/playlist/recommend [get]
 func GetRecommendPlaylists(c *gin.Context) {

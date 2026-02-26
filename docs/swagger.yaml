@@ -67,16 +67,22 @@ paths:
     get:
       description: 发送带伪造标头的请求拉取远端封面大图，避开网易云、QQ 音乐的图片防盗链 403 问题。
       parameters:
-      - description: 封面图原始 URL (需经过 urlencode)
+      - default: https://p1.music.126.net/u9YkzGKeL6VgHQZ1Zb-7Sw==/2529976256655220.jpg
+        description: 封面图原始 URL (需经过 urlencode)
+        example: https://p1.music.126.net/u9YkzGKeL6VgHQZ1Zb-7Sw==/2529976256655220.jpg
         in: query
         name: url
         required: true
         type: string
-      - description: 歌曲名(用于生成下载文件名)
+      - default: 香水有毒
+        description: 歌曲名(用于生成下载文件名)
+        example: 香水有毒
         in: query
         name: name
         type: string
-      - description: 歌手名(用于生成下载文件名)
+      - default: 胡杨林
+        description: 歌手名(用于生成下载文件名)
+        example: 胡杨林
         in: query
         name: artist
         type: string
@@ -94,20 +100,23 @@ paths:
     get:
       description: 快速探测音频直链的可访问性，并根据 `Content-Range` 推算文件大小及大概码率。
       parameters:
-      - description: 音乐 ID
-        example: '"1815969416"'
+      - default: "240479"
+        description: 音乐 ID
+        example: "240479"
         in: query
         name: id
         required: true
         type: string
-      - description: 音乐来源平台
-        example: '"netease"'
+      - default: netease
+        description: 音乐来源平台
+        example: netease
         in: query
         name: source
         required: true
         type: string
-      - description: 音乐时长(秒)，若提供则可更精确预估码率(kbps)
-        example: '"255"'
+      - default: "290"
+        description: 音乐时长(秒)，提供可精确预估码率(kbps)
+        example: "290"
         in: query
         name: duration
         type: string
@@ -123,14 +132,18 @@ paths:
       - Music
   /api/v1/music/lyric:
     get:
-      description: 抓取对应歌曲的带有时间轴的完整 LRC 歌词文本，采用标准 JSON 格式返回。
+      description: 抓取对应歌曲的完整 LRC 歌词文本，以 JSON 格式返回。
       parameters:
-      - description: 音乐 ID
+      - default: "240479"
+        description: 音乐 ID
+        example: "240479"
         in: query
         name: id
         required: true
         type: string
-      - description: 平台
+      - default: netease
+        description: 平台
+        example: netease
         in: query
         name: source
         required: true
@@ -153,21 +166,29 @@ paths:
     get:
       description: 作为附件直接下载 `.lrc` 后缀的歌词文件到本地。
       parameters:
-      - description: 音乐 ID
+      - default: "240479"
+        description: 音乐 ID
+        example: "240479"
         in: query
         name: id
         required: true
         type: string
-      - description: 平台
+      - default: netease
+        description: 平台
+        example: netease
         in: query
         name: source
         required: true
         type: string
-      - description: 音乐名称 (用于生成保存文件名)
+      - default: 香水有毒
+        description: 音乐名称 (生成保存文件名)
+        example: 香水有毒
         in: query
         name: name
         type: string
-      - description: 歌手名称 (用于生成保存文件名)
+      - default: 胡杨林
+        description: 歌手名称 (生成保存文件名)
+        example: 胡杨林
         in: query
         name: artist
         type: string
@@ -185,13 +206,14 @@ paths:
     get:
       description: 兼容多源并发搜索以及链接智能解析，自动返回单曲或歌单数组。支持直接输入关键词或粘贴音乐平台的分享链接。
       parameters:
-      - description: 关键词或音乐分享链接
-        example: '"七里香 周杰伦"'
+      - default: 香水有毒
+        description: 关键词或音乐分享链接
+        example: 香水有毒
         in: query
         name: q
         required: true
         type: string
-      - default: '"song"'
+      - default: song
         description: '搜索类型: song (单曲) 或 playlist (歌单)'
         enum:
         - song
@@ -228,13 +250,15 @@ paths:
     get:
       description: 包含完整的各平台流代理逻辑（解决跨域防盗链），并特殊支持 Soda(汽水音乐) 加密流数据的后端解密。
       parameters:
-      - description: 音乐 ID
-        example: '"1815969416"'
+      - default: "240479"
+        description: 音乐 ID
+        example: "240479"
         in: query
         name: id
         required: true
         type: string
-      - description: 音乐来源平台
+      - default: netease
+        description: 音乐来源平台
         enum:
         - netease
         - qq
@@ -244,18 +268,20 @@ paths:
         - soda
         - migu
         - fivesing
-        example: '"netease"'
+        example: netease
         in: query
         name: source
         required: true
         type: string
-      - default: '"Unknown"'
+      - default: 香水有毒
         description: 音乐名称 (用于生成下载文件名)
+        example: 香水有毒
         in: query
         name: name
         type: string
-      - default: '"Unknown"'
+      - default: 胡杨林
         description: 歌手名称 (用于生成下载文件名)
+        example: 胡杨林
         in: query
         name: artist
         type: string
@@ -283,30 +309,37 @@ paths:
       - Music
   /api/v1/music/switch:
     get:
-      description: 当某一平台的歌曲灰掉（无版权）时，通过 Levenshtein 距离算法和时长匹配，智能寻源切换到其他存在该歌曲的可用平台。
+      description: 当某一平台的歌曲灰掉（无版权）时，智能寻源切换到其他存在该歌曲的可用平台。
       parameters:
-      - description: 歌曲名称 (非常关键的匹配项)
-        example: '"七里香"'
+      - default: 香水有毒
+        description: 歌曲名称 (非常关键的匹配项)
+        example: 香水有毒
         in: query
         name: name
         required: true
         type: string
-      - description: 歌手名称
-        example: '"周杰伦"'
+      - default: 胡杨林
+        description: 歌手名称
+        example: 胡杨林
         in: query
         name: artist
         type: string
-      - description: 当前损坏的音源(将跳过此源搜索)
-        example: '"netease"'
+      - default: netease
+        description: 当前损坏的音源(将跳过此源搜索)
+        example: netease
         in: query
         name: source
         required: true
         type: string
-      - description: 指定目标尝试的音源，为空则遍历主流平台搜索
+      - default: ""
+        description: 指定目标尝试的音源，为空则遍历主流平台搜索
+        example: ""
         in: query
         name: target
         type: string
-      - description: 原音频时长(秒)，提供此时长可极大提高匹配准确度
+      - default: "290"
+        description: 原音频时长(秒)，提供此时长可极大提高匹配准确度
+        example: "290"
         in: query
         name: duration
         type: string
@@ -330,16 +363,18 @@ paths:
       - Music
   /api/v1/music/url:
     get:
-      description: 获取解析到的原始音频播放链接。注：客户端直接使用裸链接可能受到平台的防盗链拦截限制（推荐使用 `/stream` 代理接口）。
+      description: 获取解析到的原始音频播放链接。注：部分平台需要客户端带上特定的防盗链 header。
       parameters:
-      - description: 音乐 ID
-        example: '"1815969416"'
+      - default: "240479"
+        description: 音乐 ID
+        example: "240479"
         in: query
         name: id
         required: true
         type: string
-      - description: 平台源
-        example: '"netease"'
+      - default: netease
+        description: 平台源
+        example: netease
         in: query
         name: source
         required: true
@@ -366,13 +401,16 @@ paths:
     get:
       description: 传入源平台的对应歌单 ID，全量拉取并返回歌单内的全部单曲列表。
       parameters:
-      - description: 歌单的内部 ID
+      - default: "596729952"
+        description: 歌单的内部 ID
+        example: "596729952"
         in: query
         name: id
         required: true
         type: string
-      - description: 歌单所属平台
-        example: '"netease"'
+      - default: netease
+        description: 歌单所属平台
+        example: netease
         in: query
         name: source
         required: true
@@ -396,6 +434,7 @@ paths:
       description: 异步并发调用所勾选平台的接口，聚合返回他们各自首页推荐的当红歌单数据。
       parameters:
       - collectionFormat: multi
+        default: netease,qq,kugou,kuwo
         description: 要获取的推荐平台列表 (留空则使用默认配置)
         in: query
         items:
@@ -458,12 +497,16 @@ paths:
     get:
       description: 直接返回 `text/plain` 格式的纯歌词内容。若拉取失败，返回默认占位符提示。
       parameters:
-      - description: 音乐 ID
+      - default: "240479"
+        description: 音乐 ID
+        example: "240479"
         in: query
         name: id
         required: true
         type: string
-      - description: 平台
+      - default: netease
+        description: 平台
+        example: netease
         in: query
         name: source
         required: true

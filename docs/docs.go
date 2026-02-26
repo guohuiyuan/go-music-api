@@ -28,6 +28,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "default": "https://p1.music.126.net/u9YkzGKeL6VgHQZ1Zb-7Sw==/2529976256655220.jpg",
+                        "example": "https://p1.music.126.net/u9YkzGKeL6VgHQZ1Zb-7Sw==/2529976256655220.jpg",
                         "description": "封面图原始 URL (需经过 urlencode)",
                         "name": "url",
                         "in": "query",
@@ -35,12 +37,16 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "default": "香水有毒",
+                        "example": "香水有毒",
                         "description": "歌曲名(用于生成下载文件名)",
                         "name": "name",
                         "in": "query"
                     },
                     {
                         "type": "string",
+                        "default": "胡杨林",
+                        "example": "胡杨林",
                         "description": "歌手名(用于生成下载文件名)",
                         "name": "artist",
                         "in": "query"
@@ -69,7 +75,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "\"1815969416\"",
+                        "default": "240479",
+                        "example": "240479",
                         "description": "音乐 ID",
                         "name": "id",
                         "in": "query",
@@ -77,7 +84,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "example": "\"netease\"",
+                        "default": "netease",
+                        "example": "netease",
                         "description": "音乐来源平台",
                         "name": "source",
                         "in": "query",
@@ -85,8 +93,9 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "example": "\"255\"",
-                        "description": "音乐时长(秒)，若提供则可更精确预估码率(kbps)",
+                        "default": "290",
+                        "example": "290",
+                        "description": "音乐时长(秒)，提供可精确预估码率(kbps)",
                         "name": "duration",
                         "in": "query"
                     }
@@ -103,7 +112,7 @@ const docTemplate = `{
         },
         "/api/v1/music/lyric": {
             "get": {
-                "description": "抓取对应歌曲的带有时间轴的完整 LRC 歌词文本，采用标准 JSON 格式返回。",
+                "description": "抓取对应歌曲的完整 LRC 歌词文本，以 JSON 格式返回。",
                 "produces": [
                     "application/json"
                 ],
@@ -114,6 +123,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "default": "240479",
+                        "example": "240479",
                         "description": "音乐 ID",
                         "name": "id",
                         "in": "query",
@@ -121,6 +132,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "default": "netease",
+                        "example": "netease",
                         "description": "平台",
                         "name": "source",
                         "in": "query",
@@ -156,6 +169,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "default": "240479",
+                        "example": "240479",
                         "description": "音乐 ID",
                         "name": "id",
                         "in": "query",
@@ -163,6 +178,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "default": "netease",
+                        "example": "netease",
                         "description": "平台",
                         "name": "source",
                         "in": "query",
@@ -170,13 +187,17 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "音乐名称 (用于生成保存文件名)",
+                        "default": "香水有毒",
+                        "example": "香水有毒",
+                        "description": "音乐名称 (生成保存文件名)",
                         "name": "name",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "歌手名称 (用于生成保存文件名)",
+                        "default": "胡杨林",
+                        "example": "胡杨林",
+                        "description": "歌手名称 (生成保存文件名)",
                         "name": "artist",
                         "in": "query"
                     }
@@ -204,7 +225,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "\"七里香 周杰伦\"",
+                        "default": "香水有毒",
+                        "example": "香水有毒",
                         "description": "关键词或音乐分享链接",
                         "name": "q",
                         "in": "query",
@@ -216,7 +238,7 @@ const docTemplate = `{
                             "playlist"
                         ],
                         "type": "string",
-                        "default": "\"song\"",
+                        "default": "song",
                         "description": "搜索类型: song (单曲) 或 playlist (歌单)",
                         "name": "type",
                         "in": "query"
@@ -267,7 +289,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "\"1815969416\"",
+                        "default": "240479",
+                        "example": "240479",
                         "description": "音乐 ID",
                         "name": "id",
                         "in": "query",
@@ -285,7 +308,8 @@ const docTemplate = `{
                             "fivesing"
                         ],
                         "type": "string",
-                        "example": "\"netease\"",
+                        "default": "netease",
+                        "example": "netease",
                         "description": "音乐来源平台",
                         "name": "source",
                         "in": "query",
@@ -293,14 +317,16 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "default": "\"Unknown\"",
+                        "default": "香水有毒",
+                        "example": "香水有毒",
                         "description": "音乐名称 (用于生成下载文件名)",
                         "name": "name",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "default": "\"Unknown\"",
+                        "default": "胡杨林",
+                        "example": "胡杨林",
                         "description": "歌手名称 (用于生成下载文件名)",
                         "name": "artist",
                         "in": "query"
@@ -336,7 +362,7 @@ const docTemplate = `{
         },
         "/api/v1/music/switch": {
             "get": {
-                "description": "当某一平台的歌曲灰掉（无版权）时，通过 Levenshtein 距离算法和时长匹配，智能寻源切换到其他存在该歌曲的可用平台。",
+                "description": "当某一平台的歌曲灰掉（无版权）时，智能寻源切换到其他存在该歌曲的可用平台。",
                 "produces": [
                     "application/json"
                 ],
@@ -347,7 +373,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "\"七里香\"",
+                        "default": "香水有毒",
+                        "example": "香水有毒",
                         "description": "歌曲名称 (非常关键的匹配项)",
                         "name": "name",
                         "in": "query",
@@ -355,14 +382,16 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "example": "\"周杰伦\"",
+                        "default": "胡杨林",
+                        "example": "胡杨林",
                         "description": "歌手名称",
                         "name": "artist",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "example": "\"netease\"",
+                        "default": "netease",
+                        "example": "netease",
                         "description": "当前损坏的音源(将跳过此源搜索)",
                         "name": "source",
                         "in": "query",
@@ -370,12 +399,16 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "default": "",
+                        "example": "",
                         "description": "指定目标尝试的音源，为空则遍历主流平台搜索",
                         "name": "target",
                         "in": "query"
                     },
                     {
                         "type": "string",
+                        "default": "290",
+                        "example": "290",
                         "description": "原音频时长(秒)，提供此时长可极大提高匹配准确度",
                         "name": "duration",
                         "in": "query"
@@ -405,7 +438,7 @@ const docTemplate = `{
         },
         "/api/v1/music/url": {
             "get": {
-                "description": "获取解析到的原始音频播放链接。注：客户端直接使用裸链接可能受到平台的防盗链拦截限制（推荐使用 ` + "`" + `/stream` + "`" + ` 代理接口）。",
+                "description": "获取解析到的原始音频播放链接。注：部分平台需要客户端带上特定的防盗链 header。",
                 "produces": [
                     "application/json"
                 ],
@@ -416,7 +449,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "\"1815969416\"",
+                        "default": "240479",
+                        "example": "240479",
                         "description": "音乐 ID",
                         "name": "id",
                         "in": "query",
@@ -424,7 +458,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "example": "\"netease\"",
+                        "default": "netease",
+                        "example": "netease",
                         "description": "平台源",
                         "name": "source",
                         "in": "query",
@@ -466,6 +501,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "default": "596729952",
+                        "example": "596729952",
                         "description": "歌单的内部 ID",
                         "name": "id",
                         "in": "query",
@@ -473,7 +510,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "example": "\"netease\"",
+                        "default": "netease",
+                        "example": "netease",
                         "description": "歌单所属平台",
                         "name": "source",
                         "in": "query",
@@ -513,6 +551,7 @@ const docTemplate = `{
                             "type": "string"
                         },
                         "collectionFormat": "multi",
+                        "default": "netease,qq,kugou,kuwo",
                         "description": "要获取的推荐平台列表 (留空则使用默认配置)",
                         "name": "sources",
                         "in": "query"
@@ -605,6 +644,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "default": "240479",
+                        "example": "240479",
                         "description": "音乐 ID",
                         "name": "id",
                         "in": "query",
@@ -612,6 +653,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "default": "netease",
+                        "example": "netease",
                         "description": "平台",
                         "name": "source",
                         "in": "query",

@@ -15,233 +15,85 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/download_url": {
-            "post": {
-                "description": "传入带源和ID的歌曲JSON获取底层音频直链 (通常作为播放地址使用)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "核心解析"
-                ],
-                "summary": "获取下载/播放链接",
-                "parameters": [
-                    {
-                        "description": "请求参数",
-                        "name": "req",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handler.SongReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handler.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/lyric": {
-            "post": {
-                "description": "传入带源和ID的歌曲JSON获取LRC格式的歌词文本",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "核心解析"
-                ],
-                "summary": "获取歌曲歌词",
-                "parameters": [
-                    {
-                        "description": "请求参数",
-                        "name": "req",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handler.SongReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handler.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/parse": {
+        "/api/v1/music/cover": {
             "get": {
-                "description": "粘贴任意平台的单曲分享链接，自动识别平台并解析出歌曲详情",
+                "description": "发送带伪造标头的请求拉取远端封面大图，避开网易云、QQ 音乐的图片防盗链 403 问题。",
                 "produces": [
-                    "application/json"
+                    "image/jpeg"
                 ],
                 "tags": [
-                    "单曲功能"
+                    "Music"
                 ],
-                "summary": "解析单曲链接",
+                "summary": "代理请求并下载封面图",
                 "parameters": [
                     {
                         "type": "string",
-                        "default": "https://y.qq.com/n/ryqq/songDetail/0039MnYb0qxYhV",
-                        "description": "单曲分享链接",
-                        "name": "link",
+                        "description": "封面图原始 URL (需经过 urlencode)",
+                        "name": "url",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "歌曲名(用于生成下载文件名)",
+                        "name": "name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "歌手名(用于生成下载文件名)",
+                        "name": "artist",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "原封不动的图片流",
                         "schema": {
-                            "$ref": "#/definitions/handler.Response"
+                            "type": "file"
                         }
                     }
                 }
             }
         },
-        "/api/playlist/detail": {
+        "/api/v1/music/inspect": {
             "get": {
-                "description": "根据歌单ID和指定的平台，获取歌单内的所有歌曲",
+                "description": "快速探测音频直链的可访问性，并根据 ` + "`" + `Content-Range` + "`" + ` 推算文件大小及大概码率。",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "歌单功能"
+                    "Music"
                 ],
-                "summary": "获取歌单详情(包含歌曲列表)",
+                "summary": "探测音频大小与码率",
                 "parameters": [
                     {
                         "type": "string",
-                        "default": "3778678",
-                        "description": "歌单ID",
+                        "example": "\"1815969416\"",
+                        "description": "音乐 ID",
                         "name": "id",
                         "in": "query",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "default": "netease",
-                        "description": "音乐平台",
+                        "example": "\"netease\"",
+                        "description": "音乐来源平台",
                         "name": "source",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handler.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/playlist/parse": {
-            "get": {
-                "description": "粘贴歌单分享链接，自动识别平台并解析出歌单详情及包含的所有歌曲",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "歌单功能"
-                ],
-                "summary": "解析歌单链接",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "default": "https://music.163.com/#/playlist?id=3778678",
-                        "description": "歌单分享链接",
-                        "name": "link",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handler.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/playlist/recommend": {
-            "get": {
-                "description": "获取指定平台的热门或每日推荐歌单",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "歌单功能"
-                ],
-                "summary": "每日推荐歌单",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "default": "qq",
-                        "description": "音乐平台",
-                        "name": "source",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handler.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/playlist/search": {
-            "get": {
-                "description": "通过关键词搜索指定平台的歌单列表",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "歌单功能"
-                ],
-                "summary": "搜索歌单",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "default": "华语流行",
-                        "description": "歌单关键词",
-                        "name": "keyword",
                         "in": "query",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "default": "netease",
-                        "description": "音乐平台",
-                        "name": "source",
-                        "in": "query",
-                        "required": true
+                        "example": "\"255\"",
+                        "description": "音乐时长(秒)，若提供则可更精确预估码率(kbps)",
+                        "name": "duration",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "包含有效状态、真实URL、文件大小和码率等探测信息",
                         "schema": {
                             "$ref": "#/definitions/handler.Response"
                         }
@@ -249,29 +101,27 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/search": {
+        "/api/v1/music/lyric": {
             "get": {
-                "description": "根据关键词和指定的平台搜索音乐",
+                "description": "抓取对应歌曲的带有时间轴的完整 LRC 歌词文本，采用标准 JSON 格式返回。",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "单曲功能"
+                    "Music"
                 ],
-                "summary": "搜索单曲",
+                "summary": "获取 JSON 格式歌词",
                 "parameters": [
                     {
                         "type": "string",
-                        "default": "抖音",
-                        "description": "搜索关键词",
-                        "name": "keyword",
+                        "description": "音乐 ID",
+                        "name": "id",
                         "in": "query",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "default": "qq",
-                        "description": "音乐平台(qq/netease/kuwo/kugou/migu/bilibili/fivesing/joox/soda/jamendo/qianqian等)",
+                        "description": "平台",
                         "name": "source",
                         "in": "query",
                         "required": true
@@ -279,9 +129,500 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "包含 lyric 字符串属性的数据对象",
                         "schema": {
                             "$ref": "#/definitions/handler.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "对应平台未实现歌词抓取",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/music/lyric/file": {
+            "get": {
+                "description": "作为附件直接下载 ` + "`" + `.lrc` + "`" + ` 后缀的歌词文件到本地。",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "Music"
+                ],
+                "summary": "下载 LRC 歌词文件",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "音乐 ID",
+                        "name": "id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "平台",
+                        "name": "source",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "音乐名称 (用于生成保存文件名)",
+                        "name": "name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "歌手名称 (用于生成保存文件名)",
+                        "name": "artist",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "纯文本文件流",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/music/search": {
+            "get": {
+                "description": "兼容多源并发搜索以及链接智能解析，自动返回单曲或歌单数组。支持直接输入关键词或粘贴音乐平台的分享链接。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Music"
+                ],
+                "summary": "综合搜索与链接解析",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"七里香 周杰伦\"",
+                        "description": "关键词或音乐分享链接",
+                        "name": "q",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "song",
+                            "playlist"
+                        ],
+                        "type": "string",
+                        "default": "\"song\"",
+                        "description": "搜索类型: song (单曲) 或 playlist (歌单)",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "multi",
+                        "description": "指定的音源数组(留空则默认全平台)。例: netease, qq",
+                        "name": "sources",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功时返回解析的数据，包含歌曲/歌单列表",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "不支持的链接解析",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "解析过程出现错误",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/music/stream": {
+            "get": {
+                "description": "包含完整的各平台流代理逻辑（解决跨域防盗链），并特殊支持 Soda(汽水音乐) 加密流数据的后端解密。",
+                "produces": [
+                    "audio/mpeg"
+                ],
+                "tags": [
+                    "Music"
+                ],
+                "summary": "串流代理与下载音频",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"1815969416\"",
+                        "description": "音乐 ID",
+                        "name": "id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "netease",
+                            "qq",
+                            "kugou",
+                            "kuwo",
+                            "bilibili",
+                            "soda",
+                            "migu",
+                            "fivesing"
+                        ],
+                        "type": "string",
+                        "example": "\"netease\"",
+                        "description": "音乐来源平台",
+                        "name": "source",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "default": "\"Unknown\"",
+                        "description": "音乐名称 (用于生成下载文件名)",
+                        "name": "name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "\"Unknown\"",
+                        "description": "歌手名称 (用于生成下载文件名)",
+                        "name": "artist",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "直接返回音频二进制流，支持 HTTP Range",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "参数缺失或非法",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "找不到音频URL",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "音频解密失败",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/music/switch": {
+            "get": {
+                "description": "当某一平台的歌曲灰掉（无版权）时，通过 Levenshtein 距离算法和时长匹配，智能寻源切换到其他存在该歌曲的可用平台。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Music"
+                ],
+                "summary": "智能切换可用的平替音源",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"七里香\"",
+                        "description": "歌曲名称 (非常关键的匹配项)",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"周杰伦\"",
+                        "description": "歌手名称",
+                        "name": "artist",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"netease\"",
+                        "description": "当前损坏的音源(将跳过此源搜索)",
+                        "name": "source",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "指定目标尝试的音源，为空则遍历主流平台搜索",
+                        "name": "target",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "原音频时长(秒)，提供此时长可极大提高匹配准确度",
+                        "name": "duration",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功找到高匹配度的可用歌曲",
+                        "schema": {
+                            "$ref": "#/definitions/model.Song"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误(缺失歌名)",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "未匹配到任何可用平替源",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/music/url": {
+            "get": {
+                "description": "获取解析到的原始音频播放链接。注：客户端直接使用裸链接可能受到平台的防盗链拦截限制（推荐使用 ` + "`" + `/stream` + "`" + ` 代理接口）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Music"
+                ],
+                "summary": "获取音频裸直链",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"1815969416\"",
+                        "description": "音乐 ID",
+                        "name": "id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"netease\"",
+                        "description": "平台源",
+                        "name": "source",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "直接返回带有 url 的数据实体",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "源不支持",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "链接抓取失败",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/playlist/detail": {
+            "get": {
+                "description": "传入源平台的对应歌单 ID，全量拉取并返回歌单内的全部单曲列表。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Playlist"
+                ],
+                "summary": "获取歌单详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "歌单的内部 ID",
+                        "name": "id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"netease\"",
+                        "description": "歌单所属平台",
+                        "name": "source",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功的数组列表",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "源不支持",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/playlist/recommend": {
+            "get": {
+                "description": "异步并发调用所勾选平台的接口，聚合返回他们各自首页推荐的当红歌单数据。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Playlist"
+                ],
+                "summary": "获取每日推荐热门歌单",
+                "parameters": [
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "multi",
+                        "description": "要获取的推荐平台列表 (留空则使用默认配置)",
+                        "name": "sources",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "各个平台的推荐歌单数组",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/system/cookies": {
+            "get": {
+                "description": "读取并在 JSON 格式下返回当前系统已配置的各平台 Cookies。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "获取当前系统加载的 Cookies",
+                "responses": {
+                    "200": {
+                        "description": "成功返回各平台 Cookie 键值对",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "接收 JSON 格式的平台 cookie 键值对，覆盖并保存到系统，实时生效。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "设置系统 Cookies",
+                "parameters": [
+                    {
+                        "description": "平台Cookies映射示例：{\\",
+                        "name": "cookies",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "操作成功",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数解析失败",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/music/lyric": {
+            "get": {
+                "description": "直接返回 ` + "`" + `text/plain` + "`" + ` 格式的纯歌词内容。若拉取失败，返回默认占位符提示。",
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "Music (Compat)"
+                ],
+                "summary": "返回纯文本歌词 (旧版兼容)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "音乐 ID",
+                        "name": "id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "平台",
+                        "name": "source",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "LRC 文本",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 }
@@ -293,37 +634,77 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "code": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 200
                 },
                 "data": {},
                 "msg": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "success"
                 }
             }
         },
-        "handler.SongReq": {
+        "model.Song": {
             "type": "object",
-            "required": [
-                "id",
-                "source"
-            ],
             "properties": {
+                "album": {
+                    "type": "string"
+                },
+                "album_id": {
+                    "description": "某些源特有，用于获取封面",
+                    "type": "string"
+                },
+                "artist": {
+                    "type": "string"
+                },
+                "bitrate": {
+                    "description": "码率 (kbps)",
+                    "type": "integer"
+                },
+                "cover": {
+                    "description": "封面图片链接",
+                    "type": "string"
+                },
+                "duration": {
+                    "description": "秒",
+                    "type": "integer"
+                },
+                "ext": {
+                    "description": "文件后缀 (mp3, flac...)",
+                    "type": "string"
+                },
                 "extra": {
+                    "description": "用于存储源特有的元数据，避免解析 ID",
                     "type": "object",
                     "additionalProperties": {
                         "type": "string"
-                    },
-                    "example": {
-                        "{\"song_id\"": "\"31445554\"}"
                     }
                 },
                 "id": {
-                    "type": "string",
-                    "example": "31445554"
+                    "type": "string"
+                },
+                "is_invalid": {
+                    "description": "[新增] 标记歌曲是否无效 (经过 Probe 探测后)",
+                    "type": "boolean"
+                },
+                "link": {
+                    "description": "[新增] 歌曲原始链接 (例如网页地址)",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "size": {
+                    "description": "文件大小 (字节)",
+                    "type": "integer"
                 },
                 "source": {
-                    "type": "string",
-                    "example": "netease"
+                    "description": "kugou, netease, qq, bilibili...",
+                    "type": "string"
+                },
+                "url": {
+                    "description": "真实音频文件下载链接",
+                    "type": "string"
                 }
             }
         }

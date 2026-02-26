@@ -35,7 +35,7 @@
 
 ```bash
 # 安装 swag 命令行工具
-go install [github.com/swaggo/swag/cmd/swag@latest](https://github.com/swaggo/swag/cmd/swag@latest)
+go install github.com/swaggo/swag/cmd/swag@latest
 
 # 生成 docs 目录及 Swagger JSON
 swag init --parseDependency --parseInternal

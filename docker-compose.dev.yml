@@ -4,6 +4,7 @@ services:
     build: 
       context: .
       dockerfile: Dockerfile
+    image: guohuiyuan/go-music-api:dev
     container_name:  go-music-api-dev
     restart: unless-stopped
     ports:

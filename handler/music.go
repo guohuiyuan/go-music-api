@@ -258,7 +258,7 @@ func StreamMusic(c *gin.Context) {
 	}
 
 	tempSong := &model.Song{ID: id, Source: source, Name: name, Artist: artist}
-	filename := fmt.Sprintf("%s - %s.mp3", artist, name)
+	filename := fmt.Sprintf("%s - %s.mp3", name, artist)
 
 	if source == "soda" {
 		cookie := service.CM.Get("soda")
@@ -639,7 +639,7 @@ func DownloadLyricFile(c *gin.Context) {
 		return
 	}
 
-	setDownloadHeader(c, fmt.Sprintf("%s - %s.lrc", artist, name))
+	setDownloadHeader(c, fmt.Sprintf("%s - %s.lrc", name, artist))
 	c.String(200, lrc)
 }
 
@@ -660,7 +660,7 @@ func ProxyCover(c *gin.Context) {
 	}
 	resp, err := utils.Get(u, utils.WithHeader("User-Agent", UA_Common))
 	if err == nil {
-		setDownloadHeader(c, fmt.Sprintf("%s - %s.jpg", c.Query("artist"), c.Query("name")))
+		setDownloadHeader(c, fmt.Sprintf("%s - %s.jpg", c.Query("name"), c.Query("artist")))
 		c.Data(200, "image/jpeg", resp)
 	}
 }

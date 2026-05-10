@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -32,6 +31,7 @@ type Response struct {
 const (
 	UA_Common    = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
 	UA_Mobile    = "Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1"
+	Ref_Netease  = "http://music.163.com/"
 	Ref_Bilibili = "https://www.bilibili.com/"
 	Ref_Migu     = "http://music.migu.cn/"
 )
@@ -48,6 +48,8 @@ func buildReq(method, urlStr, source, rangeHeader string) (*http.Request, error)
 	req.Header.Set("User-Agent", UA_Common)
 	if source == "bilibili" {
 		req.Header.Set("Referer", Ref_Bilibili)
+	} else if source == "netease" {
+		req.Header.Set("Referer", Ref_Netease)
 	} else if source == "migu" {
 		req.Header.Set("User-Agent", UA_Mobile)
 		req.Header.Set("Referer", Ref_Migu)
@@ -68,6 +70,64 @@ func setDownloadHeader(c *gin.Context, filename string) {
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"; filename*=utf-8''%s", encoded, encoded))
 }
 
+func parseSongExtraQuery(raw string) map[string]string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || raw == "{}" || raw == "null" {
+		return nil
+	}
+	var direct map[string]string
+	if err := json.Unmarshal([]byte(raw), &direct); err == nil {
+		return direct
+	}
+	var generic map[string]interface{}
+	if err := json.Unmarshal([]byte(raw), &generic); err != nil {
+		return nil
+	}
+	extra := make(map[string]string, len(generic))
+	for key, value := range generic {
+		key = strings.TrimSpace(key)
+		if key == "" || value == nil {
+			continue
+		}
+		switch v := value.(type) {
+		case string:
+			extra[key] = v
+		case float64, bool:
+			extra[key] = fmt.Sprint(v)
+		default:
+			if data, err := json.Marshal(v); err == nil {
+				extra[key] = string(data)
+			}
+		}
+	}
+	if len(extra) == 0 {
+		return nil
+	}
+	return extra
+}
+
+func songFromQuery(c *gin.Context) *model.Song {
+	duration, _ := strconv.Atoi(strings.TrimSpace(c.Query("duration")))
+	return &model.Song{
+		ID:       strings.TrimSpace(c.Query("id")),
+		Source:   strings.TrimSpace(c.Query("source")),
+		Name:     strings.TrimSpace(c.Query("name")),
+		Artist:   strings.TrimSpace(c.Query("artist")),
+		Album:    strings.TrimSpace(c.Query("album")),
+		Cover:    strings.TrimSpace(c.Query("cover")),
+		Duration: duration,
+		Extra:    parseSongExtraQuery(c.Query("extra")),
+	}
+}
+
+func parsePositiveIntQuery(c *gin.Context, name string, fallback int) int {
+	value, err := strconv.Atoi(strings.TrimSpace(c.Query(name)))
+	if err != nil || value <= 0 {
+		return fallback
+	}
+	return value
+}
+
 // ==========================================
 // 系统配置相关接口
 // ==========================================
@@ -80,14 +140,7 @@ func setDownloadHeader(c *gin.Context, filename string) {
 // @Success 200 {object} map[string]string "成功返回各平台 Cookie 键值对"
 // @Router /api/v1/system/cookies [get]
 func GetCookies(c *gin.Context) {
-	data, err := os.ReadFile("cookies.json")
-	if err != nil {
-		c.JSON(200, gin.H{})
-		return
-	}
-	var cookies map[string]string
-	json.Unmarshal(data, &cookies)
-	c.JSON(200, cookies)
+	c.JSON(200, service.CM.GetAll())
 }
 
 // SetCookies 设置系统 Cookies
@@ -103,13 +156,139 @@ func GetCookies(c *gin.Context) {
 func SetCookies(c *gin.Context) {
 	var req map[string]string
 	if err := c.ShouldBindJSON(&req); err == nil {
-		data, _ := json.MarshalIndent(req, "", "  ")
-		_ = os.WriteFile("cookies.json", data, 0644)
-		service.CM.Load()
+		service.CM.SetAll(req)
+		if err := service.CM.Save(); err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(200, gin.H{"status": "ok"})
 	} else {
 		c.JSON(400, gin.H{"error": "Invalid JSON"})
 	}
+}
+
+func qrLoginCookieString(result *model.QRLoginResult) string {
+	if result == nil {
+		return ""
+	}
+	if cookie := strings.TrimSpace(result.Cookie); cookie != "" {
+		return cookie
+	}
+	if len(result.Cookies) == 0 {
+		return ""
+	}
+	keys := make([]string, 0, len(result.Cookies))
+	for key := range result.Cookies {
+		if strings.TrimSpace(key) != "" {
+			keys = append(keys, key)
+		}
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		value := strings.TrimSpace(result.Cookies[key])
+		if value != "" {
+			parts = append(parts, key+"="+value)
+		}
+	}
+	return strings.Join(parts, "; ")
+}
+
+func qrLoginCookieSource(source string) string {
+	if source == "qq_wx" {
+		return "qq"
+	}
+	return source
+}
+
+// GetQRLoginSources 获取支持扫码登录的平台
+// @Summary 获取支持扫码登录的平台
+// @Description 返回当前 API 支持创建二维码登录会话的平台列表。
+// @Tags System
+// @Produce json
+// @Success 200 {object} Response "支持扫码登录的平台"
+// @Router /api/v1/system/qr_login/sources [get]
+func GetQRLoginSources(c *gin.Context) {
+	sources := service.GetQRLoginSourceNames()
+	data := make([]gin.H, 0, len(sources))
+	for _, source := range sources {
+		data = append(data, gin.H{
+			"source": source,
+			"name":   service.GetSourceDescription(source),
+		})
+	}
+	c.JSON(200, Response{Code: 200, Msg: "success", Data: data})
+}
+
+// CreateQRLogin 创建扫码登录会话
+// @Summary 创建扫码登录会话
+// @Description 为指定平台创建扫码登录会话，返回二维码 URL、二维码图片地址或平台登录 key。
+// @Tags System
+// @Produce json
+// @Param source path string true "扫码登录平台" Enums(netease,qq,qq_wx,kugou,bilibili) example(qq_wx)
+// @Success 200 {object} Response "扫码登录会话"
+// @Failure 404 {object} Response "平台不支持扫码登录"
+// @Router /api/v1/system/qr_login/{source} [post]
+func CreateQRLogin(c *gin.Context) {
+	source := strings.TrimSpace(c.Param("source"))
+	fn := service.GetQRLoginCreateFunc(source)
+	if fn == nil {
+		c.JSON(404, Response{Code: 404, Msg: "unsupported qr login source"})
+		return
+	}
+	session, err := fn()
+	if err != nil {
+		c.JSON(502, Response{Code: 502, Msg: err.Error()})
+		return
+	}
+	c.JSON(200, Response{Code: 200, Msg: "success", Data: session})
+}
+
+// CheckQRLogin 轮询扫码登录状态
+// @Summary 轮询扫码登录状态
+// @Description 使用创建扫码登录会话返回的 key 轮询登录状态；成功时自动写入 cookies.json。
+// @Tags System
+// @Produce json
+// @Param source path string true "扫码登录平台" Enums(netease,qq,qq_wx,kugou,bilibili) example(qq_wx)
+// @Param key query string true "扫码登录 key"
+// @Success 200 {object} Response "扫码登录状态"
+// @Failure 400 {object} Response "缺少 key"
+// @Failure 404 {object} Response "平台不支持扫码登录"
+// @Router /api/v1/system/qr_login/{source} [get]
+func CheckQRLogin(c *gin.Context) {
+	source := strings.TrimSpace(c.Param("source"))
+	key := strings.TrimSpace(c.Query("key"))
+	if key == "" {
+		c.JSON(400, Response{Code: 400, Msg: "missing qr login key"})
+		return
+	}
+	fn := service.GetQRLoginCheckFunc(source)
+	if fn == nil {
+		c.JSON(404, Response{Code: 404, Msg: "unsupported qr login source"})
+		return
+	}
+	result, err := fn(key)
+	if err != nil {
+		c.JSON(502, Response{Code: 502, Msg: err.Error()})
+		return
+	}
+	if result != nil && result.Status == model.QRLoginStatusSuccess {
+		cookie := qrLoginCookieString(result)
+		if cookie != "" {
+			cookieSource := qrLoginCookieSource(source)
+			result.Cookie = cookie
+			service.CM.SetAll(map[string]string{cookieSource: cookie})
+			if err := service.CM.Save(); err == nil {
+				if result.Extra == nil {
+					result.Extra = make(map[string]string)
+				}
+				result.Extra["cookie_saved"] = "true"
+				result.Extra["cookie_source"] = cookieSource
+				result.Extra["cookie_length"] = strconv.Itoa(len(cookie))
+			}
+		}
+	}
+	c.JSON(200, Response{Code: 200, Msg: "success", Data: result})
 }
 
 // ==========================================
@@ -118,13 +297,13 @@ func SetCookies(c *gin.Context) {
 
 // UnifiedSearch 综合搜索与链接解析
 // @Summary 综合搜索与链接解析
-// @Description 兼容多源并发搜索以及链接智能解析，自动返回单曲或歌单数组。支持直接输入关键词或粘贴音乐平台的分享链接。
+// @Description 兼容多源并发搜索以及链接智能解析，自动返回单曲、歌单或专辑数组。支持直接输入关键词或粘贴音乐平台的分享链接。
 // @Tags Music
 // @Produce json
 // @Param q query string true "关键词或音乐分享链接" default(香水有毒) example(香水有毒)
-// @Param type query string false "搜索类型: song (单曲) 或 playlist (歌单)" Enums(song, playlist) default(song)
+// @Param type query string false "搜索类型: song (单曲)、playlist (歌单) 或 album (专辑)" Enums(song, playlist, album) default(song)
 // @Param sources query []string false "指定的音源数组(留空则默认全平台)。例: netease, qq" collectionFormat(multi)
-// @Success 200 {object} Response "成功时返回解析的数据，包含歌曲/歌单列表"
+// @Success 200 {object} Response "成功时返回解析的数据，包含歌曲、歌单或专辑列表"
 // @Failure 400 {object} Response "不支持的链接解析"
 // @Failure 500 {object} Response "解析过程出现错误"
 // @Router /api/v1/music/search [get]
@@ -137,15 +316,18 @@ func UnifiedSearch(c *gin.Context) {
 	sources := c.QueryArray("sources")
 
 	if len(sources) == 0 {
-		if searchType == "playlist" {
-			sources = []string{"netease", "qq", "kugou", "kuwo", "bilibili", "soda", "fivesing"}
+		if searchType == "album" {
+			sources = service.GetAlbumSourceNames()
+		} else if searchType == "playlist" {
+			sources = service.GetPlaylistSourceNames()
 		} else {
-			sources = []string{"netease", "qq", "kugou", "kuwo", "bilibili", "migu", "soda", "fivesing"}
+			sources = service.GetDefaultSourceNames()
 		}
 	}
 
 	var allSongs []model.Song
 	var allPlaylists []model.Playlist
+	var allAlbums []model.Playlist
 	var errorMsg string
 
 	if strings.HasPrefix(keyword, "http") {
@@ -177,6 +359,19 @@ func UnifiedSearch(c *gin.Context) {
 			}
 		}
 		if !parsed {
+			if parseAlbumFn := service.GetParseAlbumFunc(src); parseAlbumFn != nil {
+				if album, songs, err := parseAlbumFn(keyword); err == nil {
+					if searchType == "album" {
+						allAlbums = append(allAlbums, *album)
+					} else {
+						allSongs = append(allSongs, songs...)
+						searchType = "song"
+					}
+					parsed = true
+				}
+			}
+		}
+		if !parsed {
 			errorMsg = fmt.Sprintf("解析失败: 暂不支持 %s 平台的此链接类型或解析出错", src)
 		}
 	} else {
@@ -187,9 +382,23 @@ func UnifiedSearch(c *gin.Context) {
 			wg.Add(1)
 			go func(s string) {
 				defer wg.Done()
-				if searchType == "playlist" {
+				if searchType == "album" {
+					if fn := service.GetAlbumSearchFunc(s); fn != nil {
+						if res, err := fn(keyword); err == nil {
+							for i := range res {
+								res[i].Source = s
+							}
+							mu.Lock()
+							allAlbums = append(allAlbums, res...)
+							mu.Unlock()
+						}
+					}
+				} else if searchType == "playlist" {
 					if fn := service.GetPlaylistSearchFunc(s); fn != nil {
 						if res, err := fn(keyword); err == nil {
+							for i := range res {
+								res[i].Source = s
+							}
 							mu.Lock()
 							allPlaylists = append(allPlaylists, res...)
 							mu.Unlock()
@@ -224,6 +433,7 @@ func UnifiedSearch(c *gin.Context) {
 			"type":      searchType,
 			"songs":     allSongs,
 			"playlists": allPlaylists,
+			"albums":    allAlbums,
 		},
 	})
 }
@@ -247,17 +457,25 @@ func UnifiedSearch(c *gin.Context) {
 // @Failure 500 {string} string "音频解密失败"
 // @Router /api/v1/music/stream [get]
 func StreamMusic(c *gin.Context) {
-	id := c.Query("id")
-	source := c.Query("source")
-	name := c.DefaultQuery("name", "Unknown")
-	artist := c.DefaultQuery("artist", "Unknown")
+	tempSong := songFromQuery(c)
+	id := tempSong.ID
+	source := tempSong.Source
+	name := tempSong.Name
+	artist := tempSong.Artist
+	if name == "" {
+		name = "Unknown"
+		tempSong.Name = name
+	}
+	if artist == "" {
+		artist = "Unknown"
+		tempSong.Artist = artist
+	}
 
 	if id == "" || source == "" {
 		c.String(400, "Missing params")
 		return
 	}
 
-	tempSong := &model.Song{ID: id, Source: source, Name: name, Artist: artist}
 	filename := fmt.Sprintf("%s - %s.mp3", name, artist)
 
 	if source == "soda" {
@@ -337,8 +555,8 @@ func StreamMusic(c *gin.Context) {
 // @Success 200 {object} Response "包含有效状态、真实URL、文件大小和码率等探测信息"
 // @Router /api/v1/music/inspect [get]
 func InspectMusic(c *gin.Context) {
-	id := c.Query("id")
-	src := c.Query("source")
+	song := songFromQuery(c)
+	src := song.Source
 	durStr := c.Query("duration")
 
 	var urlStr string
@@ -347,7 +565,7 @@ func InspectMusic(c *gin.Context) {
 	if src == "soda" {
 		cookie := service.CM.Get("soda")
 		sodaInst := soda.New(cookie)
-		info, sErr := sodaInst.GetDownloadInfo(&model.Song{ID: id, Source: src})
+		info, sErr := sodaInst.GetDownloadInfo(song)
 		if sErr != nil {
 			c.JSON(200, gin.H{"valid": false})
 			return
@@ -359,7 +577,7 @@ func InspectMusic(c *gin.Context) {
 			c.JSON(200, gin.H{"valid": false})
 			return
 		}
-		urlStr, err = fn(&model.Song{ID: id, Source: src})
+		urlStr, err = fn(song)
 		if err != nil || urlStr == "" {
 			c.JSON(200, gin.H{"valid": false})
 			return
@@ -553,13 +771,14 @@ func SwitchSource(c *gin.Context) {
 // @Failure 500 {object} Response "链接抓取失败"
 // @Router /api/v1/music/url [get]
 func GetMusicUrl(c *gin.Context) {
-	id, src := c.Query("id"), c.Query("source")
+	song := songFromQuery(c)
+	src := song.Source
 	fn := service.GetDownloadFunc(src)
 	if fn == nil {
 		c.JSON(400, Response{Code: 400, Msg: "不支持的源"})
 		return
 	}
-	urlStr, err := fn(&model.Song{ID: id, Source: src})
+	urlStr, err := fn(song)
 	if err != nil {
 		c.JSON(500, Response{Code: 500, Msg: err.Error()})
 		return
@@ -582,13 +801,14 @@ func GetMusicUrl(c *gin.Context) {
 // @Failure 400 {object} Response "对应平台未实现歌词抓取"
 // @Router /api/v1/music/lyric [get]
 func GetLyric(c *gin.Context) {
-	id, src := c.Query("id"), c.Query("source")
+	song := songFromQuery(c)
+	src := song.Source
 	fn := service.GetLyricFunc(src)
 	if fn == nil {
 		c.JSON(400, Response{Code: 400, Msg: "无歌词支持"})
 		return
 	}
-	lrc, _ := fn(&model.Song{ID: id, Source: src})
+	lrc, _ := fn(song)
 	c.JSON(200, Response{Code: 200, Msg: "success", Data: gin.H{"lyric": lrc}})
 }
 
@@ -602,9 +822,10 @@ func GetLyric(c *gin.Context) {
 // @Success 200 {string} string "LRC 文本"
 // @Router /music/lyric [get]
 func GetLyricText(c *gin.Context) {
-	id, src := c.Query("id"), c.Query("source")
+	song := songFromQuery(c)
+	src := song.Source
 	if fn := service.GetLyricFunc(src); fn != nil {
-		if lrc, _ := fn(&model.Song{ID: id, Source: src}); lrc != "" {
+		if lrc, _ := fn(song); lrc != "" {
 			c.String(200, lrc)
 			return
 		}
@@ -624,16 +845,23 @@ func GetLyricText(c *gin.Context) {
 // @Success 200 {file} file "纯文本文件流"
 // @Router /api/v1/music/lyric/file [get]
 func DownloadLyricFile(c *gin.Context) {
-	id, src := c.Query("id"), c.Query("source")
-	name := c.DefaultQuery("name", "Unknown")
-	artist := c.DefaultQuery("artist", "Unknown")
+	song := songFromQuery(c)
+	src := song.Source
+	name := song.Name
+	artist := song.Artist
+	if name == "" {
+		name = "Unknown"
+	}
+	if artist == "" {
+		artist = "Unknown"
+	}
 
 	fn := service.GetLyricFunc(src)
 	if fn == nil {
 		c.String(404, "No support")
 		return
 	}
-	lrc, _ := fn(&model.Song{ID: id, Source: src})
+	lrc, _ := fn(song)
 	if lrc == "" {
 		c.String(404, "Lyric not found")
 		return
@@ -712,7 +940,7 @@ func GetPlaylistDetail(c *gin.Context) {
 func GetRecommendPlaylists(c *gin.Context) {
 	sources := c.QueryArray("sources")
 	if len(sources) == 0 {
-		sources = []string{"netease", "qq", "kugou", "kuwo"} // 与 server.go 对齐
+		sources = service.GetRecommendSourceNames()
 	}
 
 	var allPlaylists []model.Playlist
@@ -740,6 +968,171 @@ func GetRecommendPlaylists(c *gin.Context) {
 	}
 	wg.Wait()
 	c.JSON(200, Response{Code: 200, Msg: "success", Data: allPlaylists})
+}
+
+// GetAlbumDetail 获取专辑详情
+// @Summary 获取专辑详情
+// @Description 传入源平台的专辑 ID，返回专辑内歌曲列表。
+// @Tags Album
+// @Produce json
+// @Param id query string true "专辑 ID" example(12345)
+// @Param source query string true "专辑所属平台" Enums(netease,qq,kugou,kuwo,migu,jamendo,joox,qianqian,soda) default(netease)
+// @Success 200 {object} Response "专辑歌曲列表"
+// @Failure 400 {object} Response "源不支持或参数缺失"
+// @Router /api/v1/album/detail [get]
+func GetAlbumDetail(c *gin.Context) {
+	id, src := strings.TrimSpace(c.Query("id")), strings.TrimSpace(c.Query("source"))
+	if id == "" || src == "" {
+		c.JSON(400, Response{Code: 400, Msg: "参数缺失"})
+		return
+	}
+	fn := service.GetAlbumDetailFunc(src)
+	if fn == nil {
+		c.JSON(400, Response{Code: 400, Msg: "不支持获取该源的专辑"})
+		return
+	}
+	songs, err := fn(id)
+	if err != nil {
+		c.JSON(500, Response{Code: 500, Msg: err.Error()})
+		return
+	}
+	for i := range songs {
+		songs[i].Source = src
+	}
+	c.JSON(200, Response{Code: 200, Msg: "success", Data: songs})
+}
+
+// GetPlaylistCategories 获取歌单分类
+// @Summary 获取歌单分类
+// @Description 获取一个或多个平台支持的歌单分类标签。
+// @Tags Playlist
+// @Produce json
+// @Param sources query []string false "指定平台列表，留空则使用全部支持分类的平台" collectionFormat(multi)
+// @Success 200 {object} Response "按平台分组的歌单分类"
+// @Router /api/v1/playlist/categories [get]
+func GetPlaylistCategories(c *gin.Context) {
+	sources := c.QueryArray("sources")
+	if len(sources) == 0 {
+		sources = service.GetPlaylistCategorySourceNames()
+	}
+	type categorySource struct {
+		Source     string                   `json:"source"`
+		Name       string                   `json:"name"`
+		Categories []model.PlaylistCategory `json:"categories"`
+		Error      string                   `json:"error,omitempty"`
+	}
+	results := make([]categorySource, 0, len(sources))
+	for _, src := range sources {
+		src = strings.TrimSpace(src)
+		if src == "" {
+			continue
+		}
+		item := categorySource{Source: src, Name: service.GetSourceDescription(src)}
+		fn := service.GetPlaylistCategoriesFunc(src)
+		if fn == nil {
+			item.Error = "unsupported source"
+			results = append(results, item)
+			continue
+		}
+		categories, err := fn()
+		if err != nil {
+			item.Error = err.Error()
+		} else {
+			item.Categories = categories
+		}
+		results = append(results, item)
+	}
+	c.JSON(200, Response{Code: 200, Msg: "success", Data: results})
+}
+
+// GetCategoryPlaylists 获取分类歌单
+// @Summary 获取分类歌单
+// @Description 按平台和分类 ID 分页获取歌单。
+// @Tags Playlist
+// @Produce json
+// @Param source query string true "平台" Enums(netease,qq,kugou,kuwo,migu,qianqian,joox) default(netease)
+// @Param category_id query string true "分类 ID"
+// @Param page query int false "页码" default(1)
+// @Param limit query int false "每页数量" default(30)
+// @Success 200 {object} Response "分类歌单列表"
+// @Failure 400 {object} Response "源不支持或参数缺失"
+// @Router /api/v1/playlist/category [get]
+func GetCategoryPlaylists(c *gin.Context) {
+	src := strings.TrimSpace(c.Query("source"))
+	categoryID := strings.TrimSpace(c.Query("category_id"))
+	if categoryID == "" {
+		categoryID = strings.TrimSpace(c.Query("id"))
+	}
+	page := parsePositiveIntQuery(c, "page", 1)
+	limit := parsePositiveIntQuery(c, "limit", 30)
+	if src == "" || categoryID == "" {
+		c.JSON(400, Response{Code: 400, Msg: "参数缺失"})
+		return
+	}
+	fn := service.GetCategoryPlaylistsFunc(src)
+	if fn == nil {
+		c.JSON(400, Response{Code: 400, Msg: "不支持获取该源的分类歌单"})
+		return
+	}
+	playlists, err := fn(categoryID, page, limit)
+	if err != nil {
+		c.JSON(500, Response{Code: 500, Msg: err.Error()})
+		return
+	}
+	for i := range playlists {
+		playlists[i].Source = src
+	}
+	c.JSON(200, Response{Code: 200, Msg: "success", Data: gin.H{
+		"source":      src,
+		"category_id": categoryID,
+		"page":        page,
+		"limit":       limit,
+		"playlists":   playlists,
+	}})
+}
+
+// GetUserPlaylists 获取个人歌单
+// @Summary 获取个人歌单
+// @Description 使用已配置 Cookie 获取登录账号的个人歌单。QQ 支持我喜欢、个人目录歌单和收藏歌单。
+// @Tags Playlist
+// @Produce json
+// @Param source query string true "平台" Enums(netease,qq,kugou) default(qq)
+// @Param page query int false "页码" default(1)
+// @Param limit query int false "每页数量" default(30)
+// @Success 200 {object} Response "个人歌单列表"
+// @Failure 400 {object} Response "源不支持或参数缺失"
+// @Router /api/v1/playlist/user [get]
+func GetUserPlaylists(c *gin.Context) {
+	src := strings.TrimSpace(c.Query("source"))
+	page := parsePositiveIntQuery(c, "page", 1)
+	limit := parsePositiveIntQuery(c, "limit", 30)
+	if src == "" {
+		c.JSON(400, Response{Code: 400, Msg: "参数缺失"})
+		return
+	}
+	fn := service.GetUserPlaylistsFunc(src)
+	if fn == nil {
+		c.JSON(400, Response{Code: 400, Msg: "不支持获取该源的个人歌单"})
+		return
+	}
+	playlists, err := fn(page, limit)
+	if err != nil {
+		status := 500
+		if strings.Contains(strings.ToLower(err.Error()), "require cookie") {
+			status = 401
+		}
+		c.JSON(status, Response{Code: status, Msg: err.Error()})
+		return
+	}
+	for i := range playlists {
+		playlists[i].Source = src
+	}
+	c.JSON(200, Response{Code: 200, Msg: "success", Data: gin.H{
+		"source":    src,
+		"page":      page,
+		"limit":     limit,
+		"playlists": playlists,
+	}})
 }
 
 // ==========================================

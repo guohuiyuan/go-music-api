@@ -40,6 +40,9 @@ func SetupRouter() *gin.Engine {
 		{
 			sys.GET("/cookies", handler.GetCookies)
 			sys.POST("/cookies", handler.SetCookies)
+			sys.GET("/qr_login/sources", handler.GetQRLoginSources)
+			sys.POST("/qr_login/:source", handler.CreateQRLogin)
+			sys.GET("/qr_login/:source", handler.CheckQRLogin)
 		}
 
 		// 2. 单曲相关 (Music)
@@ -60,6 +63,14 @@ func SetupRouter() *gin.Engine {
 		{
 			playlist.GET("/detail", handler.GetPlaylistDetail)
 			playlist.GET("/recommend", handler.GetRecommendPlaylists)
+			playlist.GET("/categories", handler.GetPlaylistCategories)
+			playlist.GET("/category", handler.GetCategoryPlaylists)
+			playlist.GET("/user", handler.GetUserPlaylists)
+		}
+
+		album := api.Group("/album")
+		{
+			album.GET("/detail", handler.GetAlbumDetail)
 		}
 	}
 
@@ -72,17 +83,24 @@ func SetupRouter() *gin.Engine {
 	{
 		compat.GET("/cookies", handler.GetCookies)
 		compat.POST("/cookies", handler.SetCookies)
-		
+		compat.GET("/qr_login/sources", handler.GetQRLoginSources)
+		compat.POST("/qr_login/:source", handler.CreateQRLogin)
+		compat.GET("/qr_login/:source", handler.CheckQRLogin)
+
 		compat.GET("/search", handler.UnifiedSearch)            // 对应 server.go 的 /search
 		compat.GET("/playlist", handler.GetPlaylistDetail)      // 对应 server.go 的 /playlist
+		compat.GET("/album", handler.GetAlbumDetail)            // 对应 server.go 的 /album
 		compat.GET("/recommend", handler.GetRecommendPlaylists) // 对应 server.go 的 /recommend
-		
-		compat.GET("/inspect", handler.InspectMusic)            // 对应 server.go 的 /inspect
-		compat.GET("/switch_source", handler.SwitchSource)      // 对应 server.go 的 /switch_source
-		compat.GET("/download", handler.StreamMusic)            // 对应 server.go 的 /download
-		compat.GET("/download_lrc", handler.DownloadLyricFile)  // 对应 server.go 的 /download_lrc
-		compat.GET("/download_cover", handler.ProxyCover)       // 对应 server.go 的 /download_cover
-		compat.GET("/lyric", handler.GetLyricText)              // 对应 server.go 的 /lyric (纯文本返回)
+		compat.GET("/playlist_categories", handler.GetPlaylistCategories)
+		compat.GET("/category_playlists", handler.GetCategoryPlaylists)
+		compat.GET("/user_playlists", handler.GetUserPlaylists)
+
+		compat.GET("/inspect", handler.InspectMusic)           // 对应 server.go 的 /inspect
+		compat.GET("/switch_source", handler.SwitchSource)     // 对应 server.go 的 /switch_source
+		compat.GET("/download", handler.StreamMusic)           // 对应 server.go 的 /download
+		compat.GET("/download_lrc", handler.DownloadLyricFile) // 对应 server.go 的 /download_lrc
+		compat.GET("/download_cover", handler.ProxyCover)      // 对应 server.go 的 /download_cover
+		compat.GET("/lyric", handler.GetLyricText)             // 对应 server.go 的 /lyric (纯文本返回)
 	}
 
 	return r

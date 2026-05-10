@@ -15,6 +15,61 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/album/detail": {
+            "get": {
+                "description": "传入源平台的专辑 ID，返回专辑内歌曲列表。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Album"
+                ],
+                "summary": "获取专辑详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "12345",
+                        "description": "专辑 ID",
+                        "name": "id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "netease",
+                            "qq",
+                            "kugou",
+                            "kuwo",
+                            "migu",
+                            "jamendo",
+                            "joox",
+                            "qianqian",
+                            "soda"
+                        ],
+                        "type": "string",
+                        "default": "netease",
+                        "description": "专辑所属平台",
+                        "name": "source",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "专辑歌曲列表",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "源不支持或参数缺失",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/music/cover": {
             "get": {
                 "description": "发送带伪造标头的请求拉取远端封面大图，避开网易云、QQ 音乐的图片防盗链 403 问题。",
@@ -214,7 +269,7 @@ const docTemplate = `{
         },
         "/api/v1/music/search": {
             "get": {
-                "description": "兼容多源并发搜索以及链接智能解析，自动返回单曲或歌单数组。支持直接输入关键词或粘贴音乐平台的分享链接。",
+                "description": "兼容多源并发搜索以及链接智能解析，自动返回单曲、歌单或专辑数组。支持直接输入关键词或粘贴音乐平台的分享链接。",
                 "produces": [
                     "application/json"
                 ],
@@ -235,11 +290,12 @@ const docTemplate = `{
                     {
                         "enum": [
                             "song",
-                            "playlist"
+                            "playlist",
+                            "album"
                         ],
                         "type": "string",
                         "default": "song",
-                        "description": "搜索类型: song (单曲) 或 playlist (歌单)",
+                        "description": "搜索类型: song (单曲)、playlist (歌单) 或 album (专辑)",
                         "name": "type",
                         "in": "query"
                     },
@@ -256,7 +312,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "成功时返回解析的数据，包含歌曲/歌单列表",
+                        "description": "成功时返回解析的数据，包含歌曲、歌单或专辑列表",
                         "schema": {
                             "$ref": "#/definitions/handler.Response"
                         }
@@ -488,6 +544,104 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/playlist/categories": {
+            "get": {
+                "description": "获取一个或多个平台支持的歌单分类标签。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Playlist"
+                ],
+                "summary": "获取歌单分类",
+                "parameters": [
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "multi",
+                        "description": "指定平台列表，留空则使用全部支持分类的平台",
+                        "name": "sources",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "按平台分组的歌单分类",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/playlist/category": {
+            "get": {
+                "description": "按平台和分类 ID 分页获取歌单。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Playlist"
+                ],
+                "summary": "获取分类歌单",
+                "parameters": [
+                    {
+                        "enum": [
+                            "netease",
+                            "qq",
+                            "kugou",
+                            "kuwo",
+                            "migu",
+                            "qianqian",
+                            "joox"
+                        ],
+                        "type": "string",
+                        "default": "netease",
+                        "description": "平台",
+                        "name": "source",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "分类 ID",
+                        "name": "category_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 30,
+                        "description": "每页数量",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "分类歌单列表",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "源不支持或参数缺失",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/playlist/detail": {
             "get": {
                 "description": "传入源平台的对应歌单 ID，全量拉取并返回歌单内的全部单曲列表。",
@@ -567,6 +721,61 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/playlist/user": {
+            "get": {
+                "description": "使用已配置 Cookie 获取登录账号的个人歌单。QQ 支持我喜欢、个人目录歌单和收藏歌单。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Playlist"
+                ],
+                "summary": "获取个人歌单",
+                "parameters": [
+                    {
+                        "enum": [
+                            "netease",
+                            "qq",
+                            "kugou"
+                        ],
+                        "type": "string",
+                        "default": "qq",
+                        "description": "平台",
+                        "name": "source",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 30,
+                        "description": "每页数量",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "个人歌单列表",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "源不支持或参数缺失",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/system/cookies": {
             "get": {
                 "description": "读取并在 JSON 格式下返回当前系统已配置的各平台 Cookies。",
@@ -624,6 +833,123 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "参数解析失败",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/system/qr_login/sources": {
+            "get": {
+                "description": "返回当前 API 支持创建二维码登录会话的平台列表。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "获取支持扫码登录的平台",
+                "responses": {
+                    "200": {
+                        "description": "支持扫码登录的平台",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/system/qr_login/{source}": {
+            "get": {
+                "description": "使用创建扫码登录会话返回的 key 轮询登录状态；成功时自动写入 cookies.json。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "轮询扫码登录状态",
+                "parameters": [
+                    {
+                        "enum": [
+                            "netease",
+                            "qq",
+                            "qq_wx",
+                            "kugou",
+                            "bilibili"
+                        ],
+                        "type": "string",
+                        "example": "qq_wx",
+                        "description": "扫码登录平台",
+                        "name": "source",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "扫码登录 key",
+                        "name": "key",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "扫码登录状态",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "缺少 key",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "平台不支持扫码登录",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "为指定平台创建扫码登录会话，返回二维码 URL、二维码图片地址或平台登录 key。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "创建扫码登录会话",
+                "parameters": [
+                    {
+                        "enum": [
+                            "netease",
+                            "qq",
+                            "qq_wx",
+                            "kugou",
+                            "bilibili"
+                        ],
+                        "type": "string",
+                        "example": "qq_wx",
+                        "description": "扫码登录平台",
+                        "name": "source",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "扫码登录会话",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "平台不支持扫码登录",
                         "schema": {
                             "$ref": "#/definitions/handler.Response"
                         }

@@ -1,5 +1,7 @@
 # go-music-api
 
+> ⭐ 如果这个项目正在帮你省时间，欢迎顺手点一个 Star。Star 越多，作者越能确认这个工具确实有人在用，也会更有动力优先修复失效站点、适配新站点和更新版本。
+
 `go-music-api` 是基于 `music-lib` 的统一 HTTP API 服务，用于把 `go-music-dl` 中已经验证的多平台音乐能力开放给 Web、桌面端、机器人插件或其它后端服务调用。
 
 项目提供两套路由：
@@ -21,20 +23,20 @@
 
 ## 支持平台
 
-| 平台 | Source | 歌曲 | 歌词 | 歌单 | 专辑 | 推荐歌单 | 分类歌单 | 个人歌单 | 扫码登录 | 备注 |
-| :-- | :-- | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :-- |
-| 网易云音乐 | `netease` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |  |
-| QQ 音乐 | `qq` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 支持 QQ 扫码与微信扫码 |
-| QQ 音乐微信扫码 | `qq_wx` | - | - | - | - | - | - | - | ✅ | 登录成功写入 `qq` Cookie |
-| 酷狗音乐 | `kugou` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | App/Lite Cookie 可用于部分高音质 |
-| 酷我音乐 | `kuwo` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | - | - |  |
-| 咪咕音乐 | `migu` | ✅ | ✅ | ✅ | ✅ | - | ✅ | - | - |  |
-| 千千音乐 | `qianqian` | ✅ | ✅ | ✅ | ✅ | - | ✅ | - | - |  |
-| 汽水音乐 | `soda` | ✅ | ✅ | ✅ | ✅ | - | - | - | - | 支持加密音频解密 |
-| 5sing | `fivesing` | ✅ | ✅ | ✅ | - | - | - | - | - |  |
-| Jamendo | `jamendo` | ✅ | ✅ | ✅ | ✅ | - | - | - | - | CC 音乐 |
-| JOOX | `joox` | ✅ | ✅ | ✅ | ✅ | - | ✅ | - | - |  |
-| Bilibili | `bilibili` | ✅ | ✅ | ✅ | - | - | - | - | ✅ | 音频来自视频资源 |
+| 平台            | Source       | 歌曲 | 歌词 | 歌单 | 专辑 | 推荐歌单 | 分类歌单 | 个人歌单 | 扫码登录 | 备注                             |
+| :-------------- | :----------- | :--: | :--: | :--: | :--: | :------: | :------: | :------: | :------: | :------------------------------- |
+| 网易云音乐      | `netease`  |  ✅  |  ✅  |  ✅  |  ✅  |    ✅    |    ✅    |    ✅    |    ✅    |                                  |
+| QQ 音乐         | `qq`       |  ✅  |  ✅  |  ✅  |  ✅  |    ✅    |    ✅    |    ✅    |    ✅    | 支持 QQ 扫码与微信扫码           |
+| QQ 音乐微信扫码 | `qq_wx`    |  -  |  -  |  -  |  -  |    -    |    -    |    -    |    ✅    | 登录成功写入 `qq` Cookie       |
+| 酷狗音乐        | `kugou`    |  ✅  |  ✅  |  ✅  |  ✅  |    ✅    |    ✅    |    ✅    |    ✅    | App/Lite Cookie 可用于部分高音质 |
+| 酷我音乐        | `kuwo`     |  ✅  |  ✅  |  ✅  |  ✅  |    ✅    |    ✅    |    -    |    -    |                                  |
+| 咪咕音乐        | `migu`     |  ✅  |  ✅  |  ✅  |  ✅  |    -    |    ✅    |    -    |    -    |                                  |
+| 千千音乐        | `qianqian` |  ✅  |  ✅  |  ✅  |  ✅  |    -    |    ✅    |    -    |    -    |                                  |
+| 汽水音乐        | `soda`     |  ✅  |  ✅  |  ✅  |  ✅  |    -    |    -    |    -    |    -    | 支持加密音频解密                 |
+| 5sing           | `fivesing` |  ✅  |  ✅  |  ✅  |  -  |    -    |    -    |    -    |    -    |                                  |
+| Jamendo         | `jamendo`  |  ✅  |  ✅  |  ✅  |  ✅  |    -    |    -    |    -    |    -    | CC 音乐                          |
+| JOOX            | `joox`     |  ✅  |  ✅  |  ✅  |  ✅  |    -    |    ✅    |    -    |    -    |                                  |
+| Bilibili        | `bilibili` |  ✅  |  ✅  |  ✅  |  -  |    -    |    -    |    -    |    ✅    | 音频来自视频资源                 |
 
 > 说明：表格表示 API 层已接入对应 `music-lib` 能力；实际资源是否可播放、是否有歌词或是否需要 Cookie，取决于平台策略和具体资源。
 
@@ -93,13 +95,13 @@ swag init --parseDependency --parseInternal
 
 ### System
 
-| 方法 | 路径 | 说明 |
-| :-- | :-- | :-- |
-| `GET` | `/api/v1/system/cookies` | 获取当前 Cookie 配置 |
-| `POST` | `/api/v1/system/cookies` | 热更新并保存 Cookie |
-| `GET` | `/api/v1/system/qr_login/sources` | 获取支持扫码登录的平台 |
-| `POST` | `/api/v1/system/qr_login/:source` | 创建扫码登录会话 |
-| `GET` | `/api/v1/system/qr_login/:source?key=...` | 轮询扫码登录状态，成功后自动保存 Cookie |
+| 方法     | 路径                                        | 说明                                    |
+| :------- | :------------------------------------------ | :-------------------------------------- |
+| `GET`  | `/api/v1/system/cookies`                  | 获取当前 Cookie 配置                    |
+| `POST` | `/api/v1/system/cookies`                  | 热更新并保存 Cookie                     |
+| `GET`  | `/api/v1/system/qr_login/sources`         | 获取支持扫码登录的平台                  |
+| `POST` | `/api/v1/system/qr_login/:source`         | 创建扫码登录会话                        |
+| `GET`  | `/api/v1/system/qr_login/:source?key=...` | 轮询扫码登录状态，成功后自动保存 Cookie |
 
 扫码登录 `source` 支持：
 
@@ -109,30 +111,30 @@ netease, qq, qq_wx, kugou, bilibili
 
 ### Music
 
-| 方法 | 路径 | 说明 |
-| :-- | :-- | :-- |
-| `GET` | `/api/v1/music/search?q=...&type=song` | 搜索歌曲 |
-| `GET` | `/api/v1/music/search?q=...&type=playlist` | 搜索歌单 |
-| `GET` | `/api/v1/music/search?q=...&type=album` | 搜索专辑 |
-| `GET` | `/api/v1/music/url` | 获取音频裸直链 |
-| `GET` | `/api/v1/music/stream` | 代理音频流/下载音频 |
-| `GET` | `/api/v1/music/inspect` | 探测音频可用性、大小、码率 |
-| `GET` | `/api/v1/music/switch` | 智能切换可用音源 |
-| `GET` | `/api/v1/music/lyric` | 获取 JSON 格式歌词 |
-| `GET` | `/api/v1/music/lyric/file` | 下载 `.lrc` 歌词文件 |
-| `GET` | `/api/v1/music/cover` | 代理下载封面图 |
+| 方法    | 路径                                         | 说明                       |
+| :------ | :------------------------------------------- | :------------------------- |
+| `GET` | `/api/v1/music/search?q=...&type=song`     | 搜索歌曲                   |
+| `GET` | `/api/v1/music/search?q=...&type=playlist` | 搜索歌单                   |
+| `GET` | `/api/v1/music/search?q=...&type=album`    | 搜索专辑                   |
+| `GET` | `/api/v1/music/url`                        | 获取音频裸直链             |
+| `GET` | `/api/v1/music/stream`                     | 代理音频流/下载音频        |
+| `GET` | `/api/v1/music/inspect`                    | 探测音频可用性、大小、码率 |
+| `GET` | `/api/v1/music/switch`                     | 智能切换可用音源           |
+| `GET` | `/api/v1/music/lyric`                      | 获取 JSON 格式歌词         |
+| `GET` | `/api/v1/music/lyric/file`                 | 下载 `.lrc` 歌词文件     |
+| `GET` | `/api/v1/music/cover`                      | 代理下载封面图             |
 
 `/api/v1/music/search` 的 `q` 可以是关键词，也可以是平台分享链接。链接解析会自动识别歌曲、歌单或专辑。
 
 ### Playlist
 
-| 方法 | 路径 | 说明 |
-| :-- | :-- | :-- |
-| `GET` | `/api/v1/playlist/detail?source=qq&id=...` | 获取歌单歌曲 |
-| `GET` | `/api/v1/playlist/recommend` | 获取推荐歌单 |
-| `GET` | `/api/v1/playlist/categories` | 获取歌单分类 |
-| `GET` | `/api/v1/playlist/category?source=netease&category_id=...` | 获取分类下歌单 |
-| `GET` | `/api/v1/playlist/user?source=qq&page=1&limit=30` | 获取登录账号个人歌单 |
+| 方法    | 路径                                                         | 说明                 |
+| :------ | :----------------------------------------------------------- | :------------------- |
+| `GET` | `/api/v1/playlist/detail?source=qq&id=...`                 | 获取歌单歌曲         |
+| `GET` | `/api/v1/playlist/recommend`                               | 获取推荐歌单         |
+| `GET` | `/api/v1/playlist/categories`                              | 获取歌单分类         |
+| `GET` | `/api/v1/playlist/category?source=netease&category_id=...` | 获取分类下歌单       |
+| `GET` | `/api/v1/playlist/user?source=qq&page=1&limit=30`          | 获取登录账号个人歌单 |
 
 QQ 个人歌单支持特殊 ID：
 
@@ -143,30 +145,30 @@ QQ 个人歌单支持特殊 ID：
 
 ### Album
 
-| 方法 | 路径 | 说明 |
-| :-- | :-- | :-- |
+| 方法    | 路径                                           | 说明         |
+| :------ | :--------------------------------------------- | :----------- |
 | `GET` | `/api/v1/album/detail?source=netease&id=...` | 获取专辑歌曲 |
 
 ## 兼容 API
 
 兼容路由位于 `/music/*`，主要用于旧版前端或脚本：
 
-| 路径 | 对应能力 |
-| :-- | :-- |
-| `/music/search` | 综合搜索/链接解析 |
-| `/music/download` | 音频代理下载 |
-| `/music/download_lrc` | 歌词文件下载 |
-| `/music/download_cover` | 封面下载 |
-| `/music/lyric` | 纯文本歌词 |
-| `/music/inspect` | 音频探测 |
-| `/music/switch_source` | 智能换源 |
-| `/music/playlist` | 歌单详情 |
-| `/music/album` | 专辑详情 |
-| `/music/recommend` | 推荐歌单 |
-| `/music/playlist_categories` | 歌单分类 |
-| `/music/category_playlists` | 分类歌单 |
-| `/music/user_playlists` | 个人歌单 |
-| `/music/qr_login/:source` | 扫码登录创建/轮询 |
+| 路径                           | 对应能力          |
+| :----------------------------- | :---------------- |
+| `/music/search`              | 综合搜索/链接解析 |
+| `/music/download`            | 音频代理下载      |
+| `/music/download_lrc`        | 歌词文件下载      |
+| `/music/download_cover`      | 封面下载          |
+| `/music/lyric`               | 纯文本歌词        |
+| `/music/inspect`             | 音频探测          |
+| `/music/switch_source`       | 智能换源          |
+| `/music/playlist`            | 歌单详情          |
+| `/music/album`               | 专辑详情          |
+| `/music/recommend`           | 推荐歌单          |
+| `/music/playlist_categories` | 歌单分类          |
+| `/music/category_playlists`  | 分类歌单          |
+| `/music/user_playlists`      | 个人歌单          |
+| `/music/qr_login/:source`    | 扫码登录创建/轮询 |
 
 ## Cookie 配置
 
@@ -241,3 +243,7 @@ curl "http://localhost:8080/api/v1/playlist/detail?source=qq&id=profile:favorite
 ## 许可证
 
 本项目遵循开源协议，详情请参见仓库根目录的 LICENSE 文件。
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/image?repos=guohuiyuan/go-music-api&type=date&legend=top-left)](https://www.star-history.com/?repos=guohuiyuan%2Fgo-music-api&type=date&legend=top-left)

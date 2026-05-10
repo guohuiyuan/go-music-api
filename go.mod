@@ -4,7 +4,7 @@ go 1.25.1
 
 require (
 	github.com/gin-gonic/gin v1.11.0
-	github.com/guohuiyuan/music-lib v1.0.6-0.20260308165809-ea321c84b16a
+	github.com/guohuiyuan/music-lib v1.1.1-0.20260508095446-dc1399eb13ae
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.1
 	github.com/swaggo/swag v1.16.6

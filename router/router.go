@@ -56,6 +56,7 @@ func SetupRouter() *gin.Engine {
 			music.GET("/lyric", handler.GetLyric)               // 获取 JSON 格式歌词
 			music.GET("/lyric/file", handler.DownloadLyricFile) // 下载 .lrc 歌词文件
 			music.GET("/cover", handler.ProxyCover)             // 代理/下载封面图防盗链
+			music.GET("/qualities", handler.GetAudioQualities)  // 查询平台音质档位与当前账号可用档位
 		}
 
 		// 3. 歌单相关 (Playlist)
@@ -71,6 +72,13 @@ func SetupRouter() *gin.Engine {
 		album := api.Group("/album")
 		{
 			album.GET("/detail", handler.GetAlbumDetail)
+		}
+
+		ranking := api.Group("/ranking")
+		{
+			ranking.GET("/toplists", handler.GetTopLists)
+			ranking.GET("/toplist", handler.GetTopListSongs)
+			ranking.GET("/hot", handler.GetHotSongs)
 		}
 	}
 
@@ -101,6 +109,10 @@ func SetupRouter() *gin.Engine {
 		compat.GET("/download_lrc", handler.DownloadLyricFile) // 对应 server.go 的 /download_lrc
 		compat.GET("/download_cover", handler.ProxyCover)      // 对应 server.go 的 /download_cover
 		compat.GET("/lyric", handler.GetLyricText)             // 对应 server.go 的 /lyric (纯文本返回)
+		compat.GET("/toplists", handler.GetTopLists)
+		compat.GET("/toplist_songs", handler.GetTopListSongs)
+		compat.GET("/hot_songs", handler.GetHotSongs)
+		compat.GET("/qualities", handler.GetAudioQualities)
 	}
 
 	return r

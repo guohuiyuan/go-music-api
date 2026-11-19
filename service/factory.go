@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/guohuiyuan/music-lib/apple"
 	"github.com/guohuiyuan/music-lib/bilibili"
 	"github.com/guohuiyuan/music-lib/fivesing"
 	"github.com/guohuiyuan/music-lib/jamendo"
@@ -15,9 +16,11 @@ import (
 	"github.com/guohuiyuan/music-lib/migu"
 	"github.com/guohuiyuan/music-lib/model"
 	"github.com/guohuiyuan/music-lib/netease"
+	"github.com/guohuiyuan/music-lib/provider"
 	"github.com/guohuiyuan/music-lib/qianqian"
 	"github.com/guohuiyuan/music-lib/qq"
 	"github.com/guohuiyuan/music-lib/soda"
+	"github.com/guohuiyuan/music-lib/spotify"
 )
 
 const CookieFile = "cookies.json"
@@ -33,9 +36,45 @@ type SearchFunc func(keyword string) ([]model.Song, error)
 type SearchPlaylistFunc func(keyword string) ([]model.Playlist, error)
 type PlaylistCategoriesFunc func() ([]model.PlaylistCategory, error)
 type CategoryPlaylistsFunc func(string, int, int) ([]model.Playlist, error)
+type TopListsFunc func() ([]model.TopList, error)
+type TopListSongsFunc func(string) ([]model.Song, error)
+type HotSongsFunc func(int) ([]model.Song, error)
 type QRLoginCreateFunc func() (*model.QRLoginSession, error)
 type QRLoginCheckFunc func(string) (*model.QRLoginResult, error)
 type UserPlaylistsFunc func(page, limit int) ([]model.Playlist, error)
+
+func sourceProvider(source, cookie string) any {
+	switch strings.ToLower(strings.TrimSpace(source)) {
+	case "netease":
+		return netease.New(cookie)
+	case "qq":
+		return qq.New(cookie)
+	case "kugou":
+		return kugou.New(cookie)
+	case "kuwo":
+		return kuwo.New(cookie)
+	case "migu":
+		return migu.New(cookie)
+	case "soda":
+		return soda.New(cookie)
+	case "apple":
+		return apple.New(cookie)
+	case "spotify":
+		return spotify.New(cookie)
+	case "qianqian":
+		return qianqian.New(cookie)
+	case "joox":
+		return joox.New(cookie)
+	case "bilibili":
+		return bilibili.New(cookie)
+	case "fivesing":
+		return fivesing.New(cookie)
+	case "jamendo":
+		return jamendo.New(cookie)
+	default:
+		return nil
+	}
+}
 
 func (m *CookieManager) Load() {
 	m.mu.Lock()
@@ -121,29 +160,43 @@ func DetectSource(link string) string {
 	if strings.Contains(link, "jamendo.com") {
 		return "jamendo"
 	}
+	if strings.Contains(link, "music.apple.com") || strings.Contains(link, "itunes.apple.com") {
+		return "apple"
+	}
+	if strings.Contains(link, "open.spotify.com") || strings.HasPrefix(strings.TrimSpace(link), "spotify:") {
+		return "spotify"
+	}
 	return ""
 }
 
 func GetAllSourceNames() []string {
-	return []string{"netease", "qq", "kugou", "kuwo", "migu", "fivesing", "jamendo", "joox", "qianqian", "soda", "bilibili"}
+	return []string{"netease", "qq", "kugou", "kuwo", "migu", "soda", "apple", "spotify", "qianqian", "joox", "bilibili", "fivesing", "jamendo"}
 }
 
 func GetPlaylistSourceNames() []string {
-	return []string{"netease", "qq", "kugou", "kuwo", "migu", "jamendo", "joox", "qianqian", "bilibili", "soda", "fivesing"}
+	return []string{"netease", "qq", "kugou", "kuwo", "migu", "jamendo", "joox", "qianqian", "bilibili", "soda", "fivesing", "apple", "spotify"}
 }
 
 func GetAlbumSourceNames() []string {
-	return []string{"netease", "qq", "kugou", "kuwo", "migu", "jamendo", "joox", "qianqian", "soda"}
+	return []string{"netease", "qq", "kugou", "kuwo", "migu", "jamendo", "joox", "qianqian", "soda", "apple", "spotify"}
 }
 
 func GetPlaylistCategorySourceNames() []string {
-	return []string{"netease", "qq", "kugou", "kuwo", "migu", "qianqian", "joox"}
+	return []string{"netease", "qq", "kugou", "kuwo", "migu", "qianqian", "joox", "soda", "apple", "spotify"}
+}
+
+func GetTopListSourceNames() []string {
+	return []string{"netease", "qq", "kugou", "kuwo", "soda", "migu", "apple", "spotify"}
+}
+
+func GetHotSongSourceNames() []string {
+	return append([]string(nil), GetTopListSourceNames()...)
 }
 
 func GetDefaultSourceNames() []string {
 	allSources := GetAllSourceNames()
 	defaultSources := make([]string, 0, len(allSources))
-	excluded := map[string]bool{"bilibili": true, "joox": true, "jamendo": true, "fivesing": true}
+	excluded := map[string]bool{"bilibili": true, "joox": true, "jamendo": true, "fivesing": true, "spotify": true}
 	for _, source := range allSources {
 		if !excluded[source] {
 			defaultSources = append(defaultSources, source)
@@ -153,15 +206,15 @@ func GetDefaultSourceNames() []string {
 }
 
 func GetRecommendSourceNames() []string {
-	return []string{"netease", "qq", "kugou", "kuwo"}
+	return []string{"netease", "qq", "kugou", "kuwo", "spotify"}
 }
 
 func GetQRLoginSourceNames() []string {
-	return []string{"netease", "qq", "qq_wx", "kugou", "bilibili"}
+	return []string{"netease", "qq", "qq_wx", "kugou", "bilibili", "soda"}
 }
 
 func GetUserPlaylistSourceNames() []string {
-	return []string{"netease", "qq", "kugou"}
+	return []string{"netease", "qq", "kugou", "soda", "spotify"}
 }
 
 func GetSourceDescription(source string) string {
@@ -177,6 +230,8 @@ func GetSourceDescription(source string) string {
 		"qianqian": "千千音乐",
 		"soda":     "汽水音乐",
 		"bilibili": "Bilibili",
+		"apple":    "Apple Music",
+		"spotify":  "Spotify",
 		"qq_wx":    "QQ音乐(微信扫码)",
 	}
 	if desc, exists := descriptions[source]; exists {
@@ -186,297 +241,100 @@ func GetSourceDescription(source string) string {
 }
 
 func GetSearchFunc(source string) SearchFunc {
-	c := CM.Get(source)
-	switch source {
-	case "netease":
-		return netease.New(c).Search
-	case "qq":
-		return qq.New(c).Search
-	case "kugou":
-		return kugou.New(c).Search
-	case "kuwo":
-		return kuwo.New(c).Search
-	case "migu":
-		return migu.New(c).Search
-	case "soda":
-		return soda.New(c).Search
-	case "bilibili":
-		return bilibili.New(c).Search
-	case "fivesing":
-		return fivesing.New(c).Search
-	case "jamendo":
-		return jamendo.New(c).Search
-	case "joox":
-		return joox.New(c).Search
-	case "qianqian":
-		return qianqian.New(c).Search
-	default:
-		return nil
+	if p, ok := sourceProvider(source, CM.Get(source)).(provider.MusicProvider); ok {
+		return p.Search
 	}
+	return nil
 }
 
 func GetAlbumSearchFunc(source string) SearchPlaylistFunc {
-	c := CM.Get(source)
-	switch source {
-	case "netease":
-		return netease.New(c).SearchAlbum
-	case "qq":
-		return qq.New(c).SearchAlbum
-	case "kugou":
-		return kugou.New(c).SearchAlbum
-	case "kuwo":
-		return kuwo.New(c).SearchAlbum
-	case "migu":
-		return migu.New(c).SearchAlbum
-	case "jamendo":
-		return jamendo.New(c).SearchAlbum
-	case "joox":
-		return joox.New(c).SearchAlbum
-	case "qianqian":
-		return qianqian.New(c).SearchAlbum
-	case "soda":
-		return soda.New(c).SearchAlbum
-	default:
-		return nil
+	if p, ok := sourceProvider(source, CM.Get(source)).(provider.AlbumProvider); ok {
+		return p.SearchAlbum
 	}
+	return nil
 }
 
 func GetDownloadFunc(source string) func(*model.Song) (string, error) {
-	c := CM.Get(source)
-	switch source {
-	case "netease":
-		return netease.New(c).GetDownloadURL
-	case "qq":
-		return qq.New(c).GetDownloadURL
-	case "kugou":
-		return kugou.New(c).GetDownloadURL
-	case "kuwo":
-		return kuwo.New(c).GetDownloadURL
-	case "migu":
-		return migu.New(c).GetDownloadURL
-	case "soda":
-		return soda.New(c).GetDownloadURL
-	case "bilibili":
-		return bilibili.New(c).GetDownloadURL
-	case "fivesing":
-		return fivesing.New(c).GetDownloadURL
-	case "jamendo":
-		return jamendo.New(c).GetDownloadURL
-	case "joox":
-		return joox.New(c).GetDownloadURL
-	case "qianqian":
-		return qianqian.New(c).GetDownloadURL
-	default:
-		return nil
-	}
+	return GetDownloadFuncWithQuality(source, "")
 }
 
 func GetLyricFunc(source string) func(*model.Song) (string, error) {
-	c := CM.Get(source)
-	switch source {
-	case "netease":
-		return netease.New(c).GetLyrics
-	case "qq":
-		return qq.New(c).GetLyrics
-	case "kugou":
-		return kugou.New(c).GetLyrics
-	case "kuwo":
-		return kuwo.New(c).GetLyrics
-	case "migu":
-		return migu.New(c).GetLyrics
-	case "soda":
-		return soda.New(c).GetLyrics
-	case "bilibili":
-		return bilibili.New(c).GetLyrics
-	case "fivesing":
-		return fivesing.New(c).GetLyrics
-	case "jamendo":
-		return jamendo.New(c).GetLyrics
-	case "joox":
-		return joox.New(c).GetLyrics
-	case "qianqian":
-		return qianqian.New(c).GetLyrics
-	default:
-		return nil
+	if p, ok := sourceProvider(source, CM.Get(source)).(provider.LyricProvider); ok {
+		return p.GetLyrics
 	}
+	return nil
 }
 
 func GetParseFunc(source string) func(string) (*model.Song, error) {
-	c := CM.Get(source)
-	switch source {
-	case "netease":
-		return netease.New(c).Parse
-	case "qq":
-		return qq.New(c).Parse
-	case "kugou":
-		return kugou.New(c).Parse
-	case "kuwo":
-		return kuwo.New(c).Parse
-	case "migu":
-		return migu.New(c).Parse
-	case "soda":
-		return soda.New(c).Parse
-	case "bilibili":
-		return bilibili.New(c).Parse
-	case "fivesing":
-		return fivesing.New(c).Parse
-	case "jamendo":
-		return jamendo.New(c).Parse
-	case "joox":
-		return joox.New(c).Parse
-	case "qianqian":
-		return qianqian.New(c).Parse
-	default:
-		return nil
+	if p, ok := sourceProvider(source, CM.Get(source)).(provider.SongParser); ok {
+		return p.Parse
 	}
+	return nil
 }
 
 // --- 追加：歌单相关工厂函数 ---
 
 func GetPlaylistSearchFunc(source string) SearchPlaylistFunc {
-	c := CM.Get(source)
-	switch source {
-	case "netease":
-		return netease.New(c).SearchPlaylist
-	case "qq":
-		return qq.New(c).SearchPlaylist
-	case "kugou":
-		return kugou.New(c).SearchPlaylist
-	case "kuwo":
-		return kuwo.New(c).SearchPlaylist
-	case "bilibili":
-		return bilibili.New(c).SearchPlaylist
-	case "soda":
-		return soda.New(c).SearchPlaylist
-	case "fivesing":
-		return fivesing.New(c).SearchPlaylist
-	case "migu":
-		return migu.New(c).SearchPlaylist
-	case "jamendo":
-		return jamendo.New(c).SearchPlaylist
-	case "joox":
-		return joox.New(c).SearchPlaylist
-	case "qianqian":
-		return qianqian.New(c).SearchPlaylist
-	default:
-		return nil
+	if p, ok := sourceProvider(source, CM.Get(source)).(provider.PlaylistProvider); ok {
+		return p.SearchPlaylist
 	}
+	return nil
 }
 
 func GetAlbumDetailFunc(source string) func(string) ([]model.Song, error) {
-	c := CM.Get(source)
-	switch source {
-	case "netease":
-		return netease.New(c).GetAlbumSongs
-	case "qq":
-		return qq.New(c).GetAlbumSongs
-	case "kugou":
-		return kugou.New(c).GetAlbumSongs
-	case "kuwo":
-		return kuwo.New(c).GetAlbumSongs
-	case "migu":
-		return migu.New(c).GetAlbumSongs
-	case "jamendo":
-		return jamendo.New(c).GetAlbumSongs
-	case "joox":
-		return joox.New(c).GetAlbumSongs
-	case "qianqian":
-		return qianqian.New(c).GetAlbumSongs
-	case "soda":
-		return soda.New(c).GetAlbumSongs
-	default:
-		return nil
+	if p, ok := sourceProvider(source, CM.Get(source)).(provider.AlbumProvider); ok {
+		return p.GetAlbumSongs
 	}
+	return nil
 }
 
 func GetPlaylistDetailFunc(source string) func(string) ([]model.Song, error) {
-	c := CM.Get(source)
-	switch source {
-	case "netease":
-		return netease.New(c).GetPlaylistSongs
-	case "qq":
-		return qq.New(c).GetPlaylistSongs
-	case "kugou":
-		return kugou.New(c).GetPlaylistSongs
-	case "kuwo":
-		return kuwo.New(c).GetPlaylistSongs
-	case "bilibili":
-		return bilibili.New(c).GetPlaylistSongs
-	case "soda":
-		return soda.New(c).GetPlaylistSongs
-	case "fivesing":
-		return fivesing.New(c).GetPlaylistSongs
-	case "migu":
-		return migu.New(c).GetPlaylistSongs
-	case "jamendo":
-		return jamendo.New(c).GetPlaylistSongs
-	case "joox":
-		return joox.New(c).GetPlaylistSongs
-	case "qianqian":
-		return qianqian.New(c).GetPlaylistSongs
-	default:
-		return nil
+	if p, ok := sourceProvider(source, CM.Get(source)).(provider.PlaylistProvider); ok {
+		return p.GetPlaylistSongs
 	}
+	return nil
 }
 
 func GetRecommendFunc(source string) func() ([]model.Playlist, error) {
-	c := CM.Get(source)
-	switch source {
-	case "netease":
-		return netease.New(c).GetRecommendedPlaylists
-	case "qq":
-		return qq.New(c).GetRecommendedPlaylists
-	case "kugou":
-		return kugou.New(c).GetRecommendedPlaylists
-	case "kuwo":
-		return kuwo.New(c).GetRecommendedPlaylists
-	default:
-		return nil
+	if p, ok := sourceProvider(source, CM.Get(source)).(provider.RecommendedPlaylistProvider); ok {
+		return p.GetRecommendedPlaylists
 	}
+	return nil
 }
 
 func GetPlaylistCategoriesFunc(source string) PlaylistCategoriesFunc {
-	c := CM.Get(source)
-	switch source {
-	case "netease":
-		return netease.New(c).GetPlaylistCategories
-	case "qq":
-		return qq.New(c).GetPlaylistCategories
-	case "kugou":
-		return kugou.New(c).GetPlaylistCategories
-	case "kuwo":
-		return kuwo.New(c).GetPlaylistCategories
-	case "migu":
-		return migu.New(c).GetPlaylistCategories
-	case "joox":
-		return joox.New(c).GetPlaylistCategories
-	case "qianqian":
-		return qianqian.New(c).GetPlaylistCategories
-	default:
-		return nil
+	if p, ok := sourceProvider(source, CM.Get(source)).(provider.PlaylistCategoryProvider); ok {
+		return p.GetPlaylistCategories
 	}
+	return nil
 }
 
 func GetCategoryPlaylistsFunc(source string) CategoryPlaylistsFunc {
-	c := CM.Get(source)
-	switch source {
-	case "netease":
-		return netease.New(c).GetCategoryPlaylists
-	case "qq":
-		return qq.New(c).GetCategoryPlaylists
-	case "kugou":
-		return kugou.New(c).GetCategoryPlaylists
-	case "kuwo":
-		return kuwo.New(c).GetCategoryPlaylists
-	case "migu":
-		return migu.New(c).GetCategoryPlaylists
-	case "joox":
-		return joox.New(c).GetCategoryPlaylists
-	case "qianqian":
-		return qianqian.New(c).GetCategoryPlaylists
-	default:
-		return nil
+	if p, ok := sourceProvider(source, CM.Get(source)).(provider.PlaylistCategoryProvider); ok {
+		return p.GetCategoryPlaylists
 	}
+	return nil
+}
+
+func GetTopListsFunc(source string) TopListsFunc {
+	if p, ok := sourceProvider(source, CM.Get(source)).(provider.TopListProvider); ok {
+		return p.GetTopLists
+	}
+	return nil
+}
+
+func GetTopListSongsFunc(source string) TopListSongsFunc {
+	if p, ok := sourceProvider(source, CM.Get(source)).(provider.TopListProvider); ok {
+		return p.GetTopListSongs
+	}
+	return nil
+}
+
+func GetHotSongsFunc(source string) HotSongsFunc {
+	if p, ok := sourceProvider(source, CM.Get(source)).(provider.HotSongProvider); ok {
+		return p.GetHotSongs
+	}
+	return nil
 }
 
 func GetQRLoginCreateFunc(source string) QRLoginCreateFunc {
@@ -491,6 +349,8 @@ func GetQRLoginCreateFunc(source string) QRLoginCreateFunc {
 		return kugou.CreateQRLogin
 	case "bilibili":
 		return bilibili.CreateQRLogin
+	case "soda":
+		return soda.CreateQRLogin
 	default:
 		return nil
 	}
@@ -508,77 +368,30 @@ func GetQRLoginCheckFunc(source string) QRLoginCheckFunc {
 		return kugou.CheckQRLogin
 	case "bilibili":
 		return bilibili.CheckQRLogin
+	case "soda":
+		return soda.CheckQRLogin
 	default:
 		return nil
 	}
 }
 
 func GetUserPlaylistsFunc(source string) UserPlaylistsFunc {
-	c := CM.Get(source)
-	switch source {
-	case "netease":
-		return netease.New(c).GetUserPlaylists
-	case "qq":
-		return qq.New(c).GetUserPlaylists
-	case "kugou":
-		return kugou.New(c).GetUserPlaylists
-	default:
-		return nil
+	if p, ok := sourceProvider(source, CM.Get(source)).(provider.UserPlaylistProvider); ok {
+		return p.GetUserPlaylists
 	}
+	return nil
 }
 
 func GetParsePlaylistFunc(source string) func(string) (*model.Playlist, []model.Song, error) {
-	c := CM.Get(source)
-	switch source {
-	case "netease":
-		return netease.New(c).ParsePlaylist
-	case "qq":
-		return qq.New(c).ParsePlaylist
-	case "kugou":
-		return kugou.New(c).ParsePlaylist
-	case "kuwo":
-		return kuwo.New(c).ParsePlaylist
-	case "bilibili":
-		return bilibili.New(c).ParsePlaylist
-	case "soda":
-		return soda.New(c).ParsePlaylist
-	case "fivesing":
-		return fivesing.New(c).ParsePlaylist
-	case "migu":
-		return migu.New(c).ParsePlaylist
-	case "jamendo":
-		return jamendo.New(c).ParsePlaylist
-	case "joox":
-		return joox.New(c).ParsePlaylist
-	case "qianqian":
-		return qianqian.New(c).ParsePlaylist
-	default:
-		return nil
+	if p, ok := sourceProvider(source, CM.Get(source)).(provider.PlaylistProvider); ok {
+		return p.ParsePlaylist
 	}
+	return nil
 }
 
 func GetParseAlbumFunc(source string) func(string) (*model.Playlist, []model.Song, error) {
-	c := CM.Get(source)
-	switch source {
-	case "netease":
-		return netease.New(c).ParseAlbum
-	case "qq":
-		return qq.New(c).ParseAlbum
-	case "kugou":
-		return kugou.New(c).ParseAlbum
-	case "kuwo":
-		return kuwo.New(c).ParseAlbum
-	case "migu":
-		return migu.New(c).ParseAlbum
-	case "jamendo":
-		return jamendo.New(c).ParseAlbum
-	case "joox":
-		return joox.New(c).ParseAlbum
-	case "qianqian":
-		return qianqian.New(c).ParseAlbum
-	case "soda":
-		return soda.New(c).ParseAlbum
-	default:
-		return nil
+	if p, ok := sourceProvider(source, CM.Get(source)).(provider.AlbumProvider); ok {
+		return p.ParseAlbum
 	}
+	return nil
 }

@@ -14,29 +14,34 @@
 - **多源音乐搜索**：支持歌曲、歌单、专辑三类搜索，默认按平台并发聚合。
 - **链接解析**：支持主流平台歌曲、歌单、专辑分享链接解析。
 - **音频流代理**：统一代理播放和下载，处理常见防盗链请求头；Soda/汽水音乐支持加密音频后端解密。
+- **音质选择与降级**：支持 `preview/low/standard/higher/high/lossless/hires/master` 等统一档位；当前档位不可用时按该平台音质阶梯自动降级。
+- **排行榜与热门歌曲**：接入 `music-lib/provider.RankingProvider`，统一获取榜单目录、榜单歌曲和热门单曲。
 - **歌词与封面**：支持歌词 JSON、纯文本歌词、`.lrc` 文件下载和封面代理下载。
 - **音频探测**：通过 Range 请求探测资源可用性、文件大小和估算码率。
 - **智能换源**：基于歌名、歌手和时长匹配可播放的替代音源。
-- **扫码登录**：支持网易云、QQ、QQ 音乐微信扫码、酷狗、Bilibili，成功后自动写入 `cookies.json`。
+- **扫码登录**：支持网易云、QQ、QQ 音乐微信扫码、酷狗、Bilibili、汽水音乐，成功后自动写入 `cookies.json`。
 - **歌单能力**：支持推荐歌单、分类标签、分类歌单、个人歌单和歌单详情。
+- **新增平台**：已同步 `music-lib` 当前版本的 Apple Music 与 Spotify provider。
 - **QQ 微信账号适配**：支持 `qq_wx` 扫码登录；QQ 个人目录歌单、我喜欢、收藏歌单可通过统一歌单接口读取。
 
 ## 支持平台
 
-| 平台            | Source       | 歌曲 | 歌词 | 歌单 | 专辑 | 推荐歌单 | 分类歌单 | 个人歌单 | 扫码登录 | 备注                             |
-| :-------------- | :----------- | :--: | :--: | :--: | :--: | :------: | :------: | :------: | :------: | :------------------------------- |
-| 网易云音乐      | `netease`  |  ✅  |  ✅  |  ✅  |  ✅  |    ✅    |    ✅    |    ✅    |    ✅    |                                  |
-| QQ 音乐         | `qq`       |  ✅  |  ✅  |  ✅  |  ✅  |    ✅    |    ✅    |    ✅    |    ✅    | 支持 QQ 扫码与微信扫码           |
-| QQ 音乐微信扫码 | `qq_wx`    |  -  |  -  |  -  |  -  |    -    |    -    |    -    |    ✅    | 登录成功写入 `qq` Cookie       |
-| 酷狗音乐        | `kugou`    |  ✅  |  ✅  |  ✅  |  ✅  |    ✅    |    ✅    |    ✅    |    ✅    | App/Lite Cookie 可用于部分高音质 |
-| 酷我音乐        | `kuwo`     |  ✅  |  ✅  |  ✅  |  ✅  |    ✅    |    ✅    |    -    |    -    |                                  |
-| 咪咕音乐        | `migu`     |  ✅  |  ✅  |  ✅  |  ✅  |    -    |    ✅    |    -    |    -    |                                  |
-| 千千音乐        | `qianqian` |  ✅  |  ✅  |  ✅  |  ✅  |    -    |    ✅    |    -    |    -    |                                  |
-| 汽水音乐        | `soda`     |  ❌  |  ✅  |  ✅  |  ✅  |    -    |    -    |    -    |    -    | 单曲搜索未调通；支持加密音频解密                 |
-| 5sing           | `fivesing` |  ✅  |  ✅  |  ✅  |  -  |    -    |    -    |    -    |    -    |                                  |
-| Jamendo         | `jamendo`  |  ✅  |  ✅  |  ✅  |  ✅  |    -    |    -    |    -    |    -    | CC 音乐                          |
-| JOOX            | `joox`     |  ✅  |  ✅  |  ✅  |  ✅  |    -    |    ✅    |    -    |    -    |                                  |
-| Bilibili        | `bilibili` |  ✅  |  ✅  |  ✅  |  -  |    -    |    -    |    -    |    ✅    | 音频来自视频资源                 |
+| 平台            | Source       | 歌曲 | 歌词 | 歌单 | 专辑 | 推荐歌单 | 分类歌单 | 个人歌单 | 扫码登录 | 音质 | 榜单 | 备注                             |
+| :-------------- | :----------- | :--: | :--: | :--: | :--: | :------: | :------: | :------: | :------: | :--: | :--: | :------------------------------- |
+| 网易云音乐      | `netease`  |  ✅  |  ✅  |  ✅  |  ✅  |    ✅    |    ✅    |    ✅    |    ✅    |  ✅  |  ✅  |                                  |
+| QQ 音乐         | `qq`       |  ✅  |  ✅  |  ✅  |  ✅  |    ✅    |    ✅    |    ✅    |    ✅    |  ✅  |  ✅  | 支持 QQ 扫码与微信扫码           |
+| QQ 音乐微信扫码 | `qq_wx`    |  -  |  -  |  -  |  -  |    -    |    -    |    -    |    ✅    |  -  |  -  | 登录成功写入 `qq` Cookie       |
+| 酷狗音乐        | `kugou`    |  ✅  |  ✅  |  ✅  |  ✅  |    ✅    |    ✅    |    ✅    |    ✅    |  ✅  |  ✅  | App/Lite Cookie 可用于部分高音质 |
+| 酷我音乐        | `kuwo`     |  ✅  |  ✅  |  ✅  |  ✅  |    ✅    |    ✅    |    -    |    -    |  ✅  |  ✅  |                                  |
+| 咪咕音乐        | `migu`     |  ✅  |  ✅  |  ✅  |  ✅  |    -    |    ✅    |    -    |    -    |  ✅  |  ✅  |                                  |
+| 千千音乐        | `qianqian` |  ✅  |  ✅  |  ✅  |  ✅  |    -    |    ✅    |    -    |    -    |  ✅  |  -  |                                  |
+| 汽水音乐        | `soda`     |  ✅  |  ✅  |  ✅  |  ✅  |    -    |    ✅    |    ✅    |    ✅    |  ✅  |  ✅  | 支持加密音频后端解密             |
+| Apple Music     | `apple`    |  ✅  |  ✅  |  ✅  |  ✅  |    -    |    ✅    |    -    |    -    |  ✅  |  ✅  | 受账号与地区可用性限制           |
+| Spotify         | `spotify`  |  ✅  |  ✅  |  ✅  |  ✅  |    ✅    |    ✅    |    ✅    |    -    |  ✅  |  ✅  | 默认不参与全量搜索，播放受账号限制 |
+| 5sing           | `fivesing` |  ✅  |  ✅  |  ✅  |  -  |    -    |    -    |    -    |    -    |  ✅  |  -  |                                  |
+| Jamendo         | `jamendo`  |  ✅  |  ✅  |  ✅  |  ✅  |    -    |    -    |    -    |    -    |  ✅  |  -  | CC 音乐                          |
+| JOOX            | `joox`     |  ✅  |  ✅  |  ✅  |  ✅  |    -    |    ✅    |    -    |    -    |  ✅  |  -  |                                  |
+| Bilibili        | `bilibili` |  ✅  |  ✅  |  ✅  |  -  |    -    |    -    |    -    |    ✅    |  ✅  |  -  | 音频来自视频资源                 |
 
 > 说明：表格表示 API 层已接入对应 `music-lib` 能力；实际资源是否可播放、是否有歌词或是否需要 Cookie，取决于平台策略和具体资源。
 
@@ -106,7 +111,7 @@ swag init --parseDependency --parseInternal
 扫码登录 `source` 支持：
 
 ```text
-netease, qq, qq_wx, kugou, bilibili
+netease, qq, qq_wx, kugou, bilibili, soda
 ```
 
 ### Music
@@ -123,8 +128,19 @@ netease, qq, qq_wx, kugou, bilibili
 | `GET` | `/api/v1/music/lyric`                      | 获取 JSON 格式歌词         |
 | `GET` | `/api/v1/music/lyric/file`                 | 下载 `.lrc` 歌词文件     |
 | `GET` | `/api/v1/music/cover`                      | 代理下载封面图             |
+| `GET` | `/api/v1/music/qualities?source=netease`   | 查询平台音质与账号可用档位 |
 
 `/api/v1/music/search` 的 `q` 可以是关键词，也可以是平台分享链接。链接解析会自动识别歌曲、歌单或专辑。
+
+`/music/url`、`/music/stream` 和 `/music/inspect` 均支持 `quality` 参数。请求的档位不可用时，API 会按平台音质阶梯自动降级，并在响应或 `X-Audio-Quality` 头中返回实际档位。音质查询接口默认只返回平台支持的完整档位；增加 `probe=true` 后会探测当前 Cookie 对应的真实可用范围。
+
+### Ranking
+
+| 方法    | 路径                                                 | 说明                     |
+| :------ | :--------------------------------------------------- | :----------------------- |
+| `GET` | `/api/v1/ranking/toplists`                         | 获取一个或多个平台的榜单目录 |
+| `GET` | `/api/v1/ranking/toplist?source=...&toplist_id=...` | 获取指定榜单歌曲         |
+| `GET` | `/api/v1/ranking/hot?source=...&limit=50`          | 获取平台热门单曲         |
 
 ### Playlist
 
@@ -169,6 +185,10 @@ QQ 个人歌单支持特殊 ID：
 | `/music/category_playlists`  | 分类歌单          |
 | `/music/user_playlists`      | 个人歌单          |
 | `/music/qr_login/:source`    | 扫码登录创建/轮询 |
+| `/music/toplists`            | 榜单目录          |
+| `/music/toplist_songs`       | 榜单歌曲          |
+| `/music/hot_songs`           | 热门歌曲          |
+| `/music/qualities`           | 音质档位          |
 
 ## Cookie 配置
 
@@ -234,9 +254,30 @@ curl "http://localhost:8080/api/v1/playlist/user?source=qq&page=1&limit=30"
 curl "http://localhost:8080/api/v1/playlist/detail?source=qq&id=profile:favorites"
 ```
 
+### 查询音质档位
+
+```bash
+curl "http://localhost:8080/api/v1/music/qualities?source=netease&probe=true"
+```
+
+### 获取指定音质直链
+
+```bash
+curl "http://localhost:8080/api/v1/music/url?id=240479&source=netease&quality=lossless"
+```
+
+### 获取榜单目录与热门歌曲
+
+```bash
+curl "http://localhost:8080/api/v1/ranking/toplists?sources=netease&sources=qq"
+curl "http://localhost:8080/api/v1/ranking/hot?source=kugou&limit=20"
+```
+
 ## 开发说明
 
 - 本仓库通过 `go.work` 可直接使用本地 `music-lib`，便于和 `go-music-dl` 同步开发验证。
+- `go.mod` 已锁定到与 `go-music-dl` 一致的 `music-lib` 提交，脱离 workspace 后也会使用相同能力。
+- `service/factory.go` 通过 `music-lib/provider` 接口解析搜索、歌词、歌单、专辑、音质和榜单能力，新增 provider 时优先补充统一的 `sourceProvider` 工厂。
 - 修改 handler 注释后，请重新运行 `swag init --parseDependency --parseInternal` 更新 Swagger 生成文件。
 - 新增平台能力时，优先在 `service/factory.go` 同步 source 列表、工厂函数和 README 支持矩阵。
 

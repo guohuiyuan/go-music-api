@@ -41,6 +41,10 @@ definitions:
       is_invalid:
         description: '[新增] 标记歌曲是否无效 (经过 Probe 探测后)'
         type: boolean
+      is_vip:
+        description: IsVIP marks tracks that require a paid/VIP entitlement for full
+          playback or download.
+        type: boolean
       link:
         description: '[新增] 歌曲原始链接 (例如网页地址)'
         type: string
@@ -160,6 +164,11 @@ paths:
         in: query
         name: duration
         type: string
+      - default: auto
+        description: 要探测的音质档位
+        in: query
+        name: quality
+        type: string
       produces:
       - application/json
       responses:
@@ -242,6 +251,40 @@ paths:
       summary: 下载 LRC 歌词文件
       tags:
       - Music
+  /api/v1/music/qualities:
+    get:
+      description: Returns source quality tiers. Set probe=true to test the current
+        account.
+      parameters:
+      - description: Music source
+        in: query
+        name: source
+        type: string
+      - collectionFormat: multi
+        description: Music sources
+        in: query
+        items:
+          type: string
+        name: sources
+        type: array
+      - description: Probe current account entitlement
+        in: query
+        name: probe
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.Response'
+      summary: List audio quality tiers
+      tags:
+      - Music
   /api/v1/music/search:
     get:
       description: 兼容多源并发搜索以及链接智能解析，自动返回单曲、歌单或专辑数组。支持直接输入关键词或粘贴音乐平台的分享链接。
@@ -305,10 +348,15 @@ paths:
         - qq
         - kugou
         - kuwo
-        - bilibili
-        - soda
         - migu
+        - soda
+        - apple
+        - spotify
+        - qianqian
+        - joox
+        - bilibili
         - fivesing
+        - jamendo
         example: netease
         in: query
         name: source
@@ -325,6 +373,11 @@ paths:
         example: 胡杨林
         in: query
         name: artist
+        type: string
+      - default: auto
+        description: 音质档位，例如 auto、high、lossless、hires；不可用时自动降级
+        in: query
+        name: quality
         type: string
       produces:
       - audio/mpeg
@@ -419,6 +472,11 @@ paths:
         in: query
         name: source
         required: true
+        type: string
+      - default: auto
+        description: 音质档位；不可用时自动降级
+        in: query
+        name: quality
         type: string
       produces:
       - application/json
@@ -598,6 +656,83 @@ paths:
       summary: 获取个人歌单
       tags:
       - Playlist
+  /api/v1/ranking/hot:
+    get:
+      description: Returns the current hot songs from one source.
+      parameters:
+      - description: Music source
+        in: query
+        name: source
+        required: true
+        type: string
+      - default: 50
+        description: Number of songs
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.Response'
+      summary: Get hot songs
+      tags:
+      - Ranking
+  /api/v1/ranking/toplist:
+    get:
+      description: Returns the ranked songs for one source and chart ID.
+      parameters:
+      - description: Music source
+        in: query
+        name: source
+        required: true
+        type: string
+      - description: Ranking chart ID
+        in: query
+        name: toplist_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.Response'
+      summary: Get ranking chart songs
+      tags:
+      - Ranking
+  /api/v1/ranking/toplists:
+    get:
+      description: Returns ranking chart metadata for one or more music sources.
+      parameters:
+      - collectionFormat: multi
+        description: Music sources
+        in: query
+        items:
+          type: string
+        name: sources
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response'
+      summary: List ranking charts
+      tags:
+      - Ranking
   /api/v1/system/cookies:
     get:
       description: 读取并在 JSON 格式下返回当前系统已配置的各平台 Cookies。
@@ -651,6 +786,7 @@ paths:
         - qq_wx
         - kugou
         - bilibili
+        - soda
         example: qq_wx
         in: path
         name: source
@@ -689,6 +825,7 @@ paths:
         - qq_wx
         - kugou
         - bilibili
+        - soda
         example: qq_wx
         in: path
         name: source

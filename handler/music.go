@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -114,10 +115,43 @@ func songFromQuery(c *gin.Context) *model.Song {
 		Name:     strings.TrimSpace(c.Query("name")),
 		Artist:   strings.TrimSpace(c.Query("artist")),
 		Album:    strings.TrimSpace(c.Query("album")),
+		AlbumID:  strings.TrimSpace(c.Query("album_id")),
 		Cover:    strings.TrimSpace(c.Query("cover")),
+		URL:      strings.TrimSpace(c.Query("url")),
+		Ext:      strings.TrimSpace(c.Query("ext")),
+		Link:     strings.TrimSpace(c.Query("link")),
 		Duration: duration,
 		Extra:    parseSongExtraQuery(c.Query("extra")),
 	}
+}
+
+func songExtension(song *model.Song, rawURL string) string {
+	if song != nil {
+		ext := strings.ToLower(strings.TrimSpace(strings.TrimPrefix(song.Ext, ".")))
+		switch ext {
+		case "mp3", "flac", "m4a", "aac", "ogg", "wav":
+			return ext
+		}
+	}
+	if parsed, err := url.Parse(strings.TrimSpace(rawURL)); err == nil {
+		ext := strings.ToLower(strings.TrimPrefix(path.Ext(parsed.Path), "."))
+		switch ext {
+		case "mp3", "flac", "m4a", "aac", "ogg", "wav":
+			return ext
+		}
+	}
+	return "mp3"
+}
+
+func requestedAudioQuality(c *gin.Context) string {
+	return strings.TrimSpace(c.Query("quality"))
+}
+
+func isShareLink(raw string) bool {
+	value := strings.ToLower(strings.TrimSpace(raw))
+	return strings.HasPrefix(value, "http://") ||
+		strings.HasPrefix(value, "https://") ||
+		strings.HasPrefix(value, "spotify:")
 }
 
 func parsePositiveIntQuery(c *gin.Context, name string, fallback int) int {
@@ -225,7 +259,7 @@ func GetQRLoginSources(c *gin.Context) {
 // @Description 为指定平台创建扫码登录会话，返回二维码 URL、二维码图片地址或平台登录 key。
 // @Tags System
 // @Produce json
-// @Param source path string true "扫码登录平台" Enums(netease,qq,qq_wx,kugou,bilibili) example(qq_wx)
+// @Param source path string true "扫码登录平台" Enums(netease,qq,qq_wx,kugou,bilibili,soda) example(qq_wx)
 // @Success 200 {object} Response "扫码登录会话"
 // @Failure 404 {object} Response "平台不支持扫码登录"
 // @Router /api/v1/system/qr_login/{source} [post]
@@ -249,7 +283,7 @@ func CreateQRLogin(c *gin.Context) {
 // @Description 使用创建扫码登录会话返回的 key 轮询登录状态；成功时自动写入 cookies.json。
 // @Tags System
 // @Produce json
-// @Param source path string true "扫码登录平台" Enums(netease,qq,qq_wx,kugou,bilibili) example(qq_wx)
+// @Param source path string true "扫码登录平台" Enums(netease,qq,qq_wx,kugou,bilibili,soda) example(qq_wx)
 // @Param key query string true "扫码登录 key"
 // @Success 200 {object} Response "扫码登录状态"
 // @Failure 400 {object} Response "缺少 key"
@@ -330,7 +364,7 @@ func UnifiedSearch(c *gin.Context) {
 	var allAlbums []model.Playlist
 	var errorMsg string
 
-	if strings.HasPrefix(keyword, "http") {
+	if isShareLink(keyword) {
 		src := service.DetectSource(keyword)
 		if src == "" {
 			c.JSON(400, Response{Code: 400, Msg: "不支持该链接的解析，或无法识别来源"})
@@ -448,9 +482,10 @@ func UnifiedSearch(c *gin.Context) {
 // @Tags Music
 // @Produce audio/mpeg
 // @Param id query string true "音乐 ID" default(240479) example(240479)
-// @Param source query string true "音乐来源平台" Enums(netease, qq, kugou, kuwo, bilibili, soda, migu, fivesing) default(netease) example(netease)
+// @Param source query string true "音乐来源平台" Enums(netease, qq, kugou, kuwo, migu, soda, apple, spotify, qianqian, joox, bilibili, fivesing, jamendo) default(netease) example(netease)
 // @Param name query string false "音乐名称 (用于生成下载文件名)" default(香水有毒) example(香水有毒)
 // @Param artist query string false "歌手名称 (用于生成下载文件名)" default(胡杨林) example(胡杨林)
+// @Param quality query string false "音质档位，例如 auto、high、lossless、hires；不可用时自动降级" default(auto)
 // @Success 200 {file} file "直接返回音频二进制流，支持 HTTP Range"
 // @Failure 400 {string} string "参数缺失或非法"
 // @Failure 404 {string} string "找不到音频URL"
@@ -476,16 +511,17 @@ func StreamMusic(c *gin.Context) {
 		return
 	}
 
-	filename := fmt.Sprintf("%s - %s.mp3", name, artist)
+	quality := requestedAudioQuality(c)
 
 	if source == "soda" {
-		cookie := service.CM.Get("soda")
-		sodaInst := soda.New(cookie)
-		info, err := sodaInst.GetDownloadInfo(tempSong)
+		info, resolvedQuality, err := service.ResolveSodaDownloadInfo(tempSong, quality)
 		if err != nil {
 			c.String(502, "Soda info error")
 			return
 		}
+		tempSong.Ext = info.Format
+		filename := fmt.Sprintf("%s - %s.%s", name, artist, songExtension(tempSong, info.URL))
+		c.Header("X-Audio-Quality", resolvedQuality)
 		req, err := buildReq("GET", info.URL, "soda", "")
 		if err != nil {
 			c.String(502, "Soda request error")
@@ -508,18 +544,15 @@ func StreamMusic(c *gin.Context) {
 		return
 	}
 
-	dlFunc := service.GetDownloadFunc(source)
-	if dlFunc == nil {
-		c.String(400, "Unknown source")
-		return
-	}
-	downloadUrl, err := dlFunc(tempSong)
-	if err != nil || downloadUrl == "" {
+	resolved, err := service.ResolveDownloadURL(source, tempSong, quality)
+	if err != nil || resolved.URL == "" {
 		c.String(404, "Failed to get URL")
 		return
 	}
+	filename := fmt.Sprintf("%s - %s.%s", name, artist, songExtension(tempSong, resolved.URL))
+	c.Header("X-Audio-Quality", resolved.Quality)
 
-	req, err := buildReq("GET", downloadUrl, source, c.GetHeader("Range"))
+	req, err := buildReq("GET", resolved.URL, source, c.GetHeader("Range"))
 	if err != nil {
 		c.String(502, "Upstream request error")
 		return
@@ -552,6 +585,7 @@ func StreamMusic(c *gin.Context) {
 // @Param id query string true "音乐 ID" default(240479) example(240479)
 // @Param source query string true "音乐来源平台" default(netease) example(netease)
 // @Param duration query string false "音乐时长(秒)，提供可精确预估码率(kbps)" default(290) example(290)
+// @Param quality query string false "要探测的音质档位" default(auto)
 // @Success 200 {object} Response "包含有效状态、真实URL、文件大小和码率等探测信息"
 // @Router /api/v1/music/inspect [get]
 func InspectMusic(c *gin.Context) {
@@ -561,23 +595,22 @@ func InspectMusic(c *gin.Context) {
 
 	var urlStr string
 	var err error
+	var resolvedQuality string
 
 	if src == "soda" {
-		cookie := service.CM.Get("soda")
-		sodaInst := soda.New(cookie)
-		info, sErr := sodaInst.GetDownloadInfo(song)
+		info, sodaQuality, sErr := service.ResolveSodaDownloadInfo(song, requestedAudioQuality(c))
 		if sErr != nil {
 			c.JSON(200, gin.H{"valid": false})
 			return
 		}
 		urlStr = info.URL
+		resolvedQuality = sodaQuality
+		song.Ext = info.Format
 	} else {
-		fn := service.GetDownloadFunc(src)
-		if fn == nil {
-			c.JSON(200, gin.H{"valid": false})
-			return
-		}
-		urlStr, err = fn(song)
+		resolved, resolveErr := service.ResolveDownloadURL(src, song, requestedAudioQuality(c))
+		err = resolveErr
+		urlStr = resolved.URL
+		resolvedQuality = resolved.Quality
 		if err != nil || urlStr == "" {
 			c.JSON(200, gin.H{"valid": false})
 			return
@@ -616,6 +649,8 @@ func InspectMusic(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"valid":   valid,
 		"url":     urlStr,
+		"quality": resolvedQuality,
+		"ext":     songExtension(song, urlStr),
 		"size":    fmt.Sprintf("%.1f MB", float64(size)/1024/1024),
 		"bitrate": bitrate,
 	})
@@ -658,7 +693,7 @@ func SwitchSource(c *gin.Context) {
 	if target != "" {
 		sources = []string{target}
 	} else {
-		sources = []string{"netease", "qq", "kugou", "kuwo", "migu", "bilibili"}
+		sources = service.GetDefaultSourceNames()
 	}
 
 	type candidate struct {
@@ -751,11 +786,18 @@ func SwitchSource(c *gin.Context) {
 		"name":     selected.Name,
 		"artist":   selected.Artist,
 		"album":    selected.Album,
+		"album_id": selected.AlbumID,
 		"duration": selected.Duration,
 		"source":   selected.Source,
 		"cover":    selected.Cover,
+		"url":      selected.URL,
+		"ext":      selected.Ext,
+		"size":     selected.Size,
+		"bitrate":  selected.Bitrate,
+		"is_vip":   selected.IsVIP,
 		"score":    selectedScore,
 		"link":     selected.Link,
+		"extra":    selected.Extra,
 	})
 }
 
@@ -766,6 +808,7 @@ func SwitchSource(c *gin.Context) {
 // @Produce json
 // @Param id query string true "音乐 ID" default(240479) example(240479)
 // @Param source query string true "平台源" default(netease) example(netease)
+// @Param quality query string false "音质档位；不可用时自动降级" default(auto)
 // @Success 200 {object} Response "直接返回带有 url 的数据实体"
 // @Failure 400 {object} Response "源不支持"
 // @Failure 500 {object} Response "链接抓取失败"
@@ -773,17 +816,16 @@ func SwitchSource(c *gin.Context) {
 func GetMusicUrl(c *gin.Context) {
 	song := songFromQuery(c)
 	src := song.Source
-	fn := service.GetDownloadFunc(src)
-	if fn == nil {
-		c.JSON(400, Response{Code: 400, Msg: "不支持的源"})
-		return
-	}
-	urlStr, err := fn(song)
+	resolved, err := service.ResolveDownloadURL(src, song, requestedAudioQuality(c))
 	if err != nil {
 		c.JSON(500, Response{Code: 500, Msg: err.Error()})
 		return
 	}
-	c.JSON(200, Response{Code: 200, Msg: "success", Data: gin.H{"url": urlStr}})
+	c.JSON(200, Response{Code: 200, Msg: "success", Data: gin.H{
+		"url":     resolved.URL,
+		"quality": resolved.Quality,
+		"ext":     songExtension(song, resolved.URL),
+	}})
 }
 
 // ==========================================

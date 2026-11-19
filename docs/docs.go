@@ -153,6 +153,13 @@ const docTemplate = `{
                         "description": "音乐时长(秒)，提供可精确预估码率(kbps)",
                         "name": "duration",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "auto",
+                        "description": "要探测的音质档位",
+                        "name": "quality",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -267,6 +274,56 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/music/qualities": {
+            "get": {
+                "description": "Returns source quality tiers. Set probe=true to test the current account.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Music"
+                ],
+                "summary": "List audio quality tiers",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Music source",
+                        "name": "source",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "multi",
+                        "description": "Music sources",
+                        "name": "sources",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Probe current account entitlement",
+                        "name": "probe",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/music/search": {
             "get": {
                 "description": "兼容多源并发搜索以及链接智能解析，自动返回单曲、歌单或专辑数组。支持直接输入关键词或粘贴音乐平台的分享链接。",
@@ -358,10 +415,15 @@ const docTemplate = `{
                             "qq",
                             "kugou",
                             "kuwo",
-                            "bilibili",
-                            "soda",
                             "migu",
-                            "fivesing"
+                            "soda",
+                            "apple",
+                            "spotify",
+                            "qianqian",
+                            "joox",
+                            "bilibili",
+                            "fivesing",
+                            "jamendo"
                         ],
                         "type": "string",
                         "default": "netease",
@@ -385,6 +447,13 @@ const docTemplate = `{
                         "example": "胡杨林",
                         "description": "歌手名称 (用于生成下载文件名)",
                         "name": "artist",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "auto",
+                        "description": "音质档位，例如 auto、high、lossless、hires；不可用时自动降级",
+                        "name": "quality",
                         "in": "query"
                     }
                 ],
@@ -520,6 +589,13 @@ const docTemplate = `{
                         "name": "source",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "default": "auto",
+                        "description": "音质档位；不可用时自动降级",
+                        "name": "quality",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -776,6 +852,122 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/ranking/hot": {
+            "get": {
+                "description": "Returns the current hot songs from one source.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ranking"
+                ],
+                "summary": "Get hot songs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Music source",
+                        "name": "source",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Number of songs",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/ranking/toplist": {
+            "get": {
+                "description": "Returns the ranked songs for one source and chart ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ranking"
+                ],
+                "summary": "Get ranking chart songs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Music source",
+                        "name": "source",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Ranking chart ID",
+                        "name": "toplist_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/ranking/toplists": {
+            "get": {
+                "description": "Returns ranking chart metadata for one or more music sources.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ranking"
+                ],
+                "summary": "List ranking charts",
+                "parameters": [
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "multi",
+                        "description": "Music sources",
+                        "name": "sources",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/system/cookies": {
             "get": {
                 "description": "读取并在 JSON 格式下返回当前系统已配置的各平台 Cookies。",
@@ -877,7 +1069,8 @@ const docTemplate = `{
                             "qq",
                             "qq_wx",
                             "kugou",
-                            "bilibili"
+                            "bilibili",
+                            "soda"
                         ],
                         "type": "string",
                         "example": "qq_wx",
@@ -931,7 +1124,8 @@ const docTemplate = `{
                             "qq",
                             "qq_wx",
                             "kugou",
-                            "bilibili"
+                            "bilibili",
+                            "soda"
                         ],
                         "type": "string",
                         "example": "qq_wx",
@@ -1054,6 +1248,10 @@ const docTemplate = `{
                 },
                 "is_invalid": {
                     "description": "[新增] 标记歌曲是否无效 (经过 Probe 探测后)",
+                    "type": "boolean"
+                },
+                "is_vip": {
+                    "description": "IsVIP marks tracks that require a paid/VIP entitlement for full playback or download.",
                     "type": "boolean"
                 },
                 "link": {
